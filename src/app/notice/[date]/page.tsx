@@ -786,11 +786,7 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
                                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>유형 선택 (복수 선택 가능)</label>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     {['link', 'file', 'question'].map(t => {
-<<<<<<< HEAD
-                                        if (t === 'file' && orgUploadLimit === 'blocked') return null; // [파일 제출] 유형 제거는 설문 문항 유형에서 해야 함. 여기는 sTypes (설문 구성요소)
-=======
                                         if (t === 'file' && orgUploadLimit === 'blocked') return null;
->>>>>>> dev
                                         return (
                                             <label key={t} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <input type="checkbox" checked={sTypes.includes(t as SurveyType)} onChange={e => {
