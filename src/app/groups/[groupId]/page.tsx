@@ -122,6 +122,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
     const [nFiles, setNFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+    const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
 
     // Survey Form
     const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
@@ -278,6 +279,17 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
         // Add unsubResponses to cleanup
         return () => { unsubGroup(); unsubNotice(); unsubSurvey(); unsubResponses(); };
     }, [groupId, user]);
+
+    // Org Limit Effect
+    useEffect(() => {
+        if (!group?.orgId) return;
+        const unsubOrg = onSnapshot(doc(db, "organizations", group.orgId), (snap) => {
+            if (snap.exists()) {
+                setOrgUploadLimit(snap.data().uploadLimit || "3");
+            }
+        });
+        return () => unsubOrg();
+    }, [group?.orgId]);
 
     // Chat fetch effect
     useEffect(() => {
@@ -1170,9 +1182,11 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                         <input type="date" value={nEndDate} onChange={e => setNEndDate(e.target.value)} className="glass-card" style={{ padding: '0.8rem', width: '100%' }} required />
                                     </div>
                                 </div>
-                                <textarea value={nContent} onChange={e => setNContent(e.target.value)} placeholder="내용 (Markdown 지원)" className="glass-card" style={{ padding: '0.8rem', minHeight: '150px' }} required />
-                                <input type="file" multiple onChange={e => setNFiles(Array.from(e.target.files || []))} className="glass-card" style={{ padding: '0.8rem' }} />
-                                <button type="submit" className="btn-primary" disabled={isUploading}>{isUploading ? "등록 중..." : "등록하기"}</button>
+                                <textarea value={nContent} onChange={e => setNContent(e.target.value)} placeholder="내용 (Markdown 지원)" className="glass-card" style={{ padding: '0.8rem', minHeight: '200px' }} required />
+                                {orgUploadLimit !== 'blocked' && (
+                                    <input type="file" multiple onChange={e => setNFiles(Array.from(e.target.files || []))} className="glass-card" style={{ padding: '0.8rem' }} />
+                                )}
+                                <button type="submit" className="btn-primary" disabled={isUploading}>{isUploading ? '저장 중...' : '저장'}</button>
                             </form>
                         </div>
                     </div>
@@ -1205,8 +1219,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                             <button type="button" onClick={() => addQuestion('choice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 객관식</button>
                                             <button type="button" onClick={() => addQuestion('multiple')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 다중선택</button>
                                             <button type="button" onClick={() => addQuestion('text')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 주관식</button>
-                                            <button type="button" onClick={() => addQuestion('file')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 파일</button>
-                                            <button type="button" onClick={() => addQuestion('notice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', color: 'var(--primary)' }}>+ 설명</button>
+                                            <button type="button" onClick={() => addQuestion('notice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>+ 설명/자료</button>
                                         </div>
                                     </div>
 
@@ -1253,12 +1266,14 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                                                         </div>
                                                                     ))}
                                                                 </div>
-                                                                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.8rem' }}>
-                                                                    <button type="button" onClick={() => handleAddLink(q.id)} style={{ fontSize: '0.8rem', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--primary)' }}>+ 링크 추가</button>
-                                                                    <label style={{ fontSize: '0.8rem', cursor: 'pointer', color: 'var(--primary)' }}>
-                                                                        + 파일 추가
-                                                                        <input type="file" hidden onChange={e => handleFileChange(q.id, e)} />
-                                                                    </label>
+                                                                <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '1rem' }}>
+                                                                    <button type="button" onClick={() => handleAddLink(q.id)} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer' }}>🔗 링크 추가</button>
+                                                                    {orgUploadLimit !== 'blocked' && (
+                                                                        <label className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                                            📁 파일 추가
+                                                                            <input type="file" hidden onChange={(e) => handleFileChange(q.id, e)} />
+                                                                        </label>
+                                                                    )}
                                                                 </div>
                                                             </>
                                                         )}

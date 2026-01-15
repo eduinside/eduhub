@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { db, storage } from "@/lib/firebase";
-import { doc, getDoc, addDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, increment } from "firebase/firestore";
+import { doc, getDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp, increment } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -27,7 +27,7 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
     const [responseId, setResponseId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-
+    const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
     useEffect(() => {
         if (authLoading) return;
         if (!user) {
@@ -90,6 +90,17 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
 
         fetchSurvey();
     }, [params.id, user, authLoading]);
+
+    // Org Limit Effect
+    useEffect(() => {
+        if (!survey?.orgId) return;
+        const unsubOrg = onSnapshot(doc(db, "organizations", survey.orgId), (snap) => {
+            if (snap.exists()) {
+                setOrgUploadLimit(snap.data().uploadLimit || "3");
+            }
+        });
+        return () => unsubOrg();
+    }, [survey?.orgId]);
 
     const handleAnswerChange = (qId: string, value: any, type: string) => {
         if (type === 'multiple') {
@@ -282,10 +293,16 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
 
                             {q.type === 'file' && (
                                 <div style={{ padding: '2rem', border: '2px dashed var(--border-glass)', borderRadius: '12px', textAlign: 'center', background: 'rgba(0,0,0,0.02)' }}>
-                                    <input type="file" id={`file-${q.id}`} onChange={(e) => handleFileUpload(q.id, e)} style={{ display: 'none' }} />
-                                    <label htmlFor={`file-${q.id}`} className="glass-card" style={{ cursor: 'pointer', padding: '0.8rem 2rem', borderRadius: '99px', display: 'inline-block', fontWeight: 'bold', color: 'var(--primary)' }}>
-                                        📁 파일 선택
-                                    </label>
+                                    {orgUploadLimit !== 'blocked' ? (
+                                        <>
+                                            <input type="file" id={`file-${q.id}`} onChange={(e) => handleFileUpload(q.id, e)} style={{ display: 'none' }} />
+                                            <label htmlFor={`file-${q.id}`} className="glass-card" style={{ cursor: 'pointer', padding: '0.8rem 2rem', borderRadius: '99px', display: 'inline-block', fontWeight: 'bold', color: 'var(--primary)' }}>
+                                                📁 파일 선택
+                                            </label>
+                                        </>
+                                    ) : (
+                                        <div style={{ color: '#ff4444', fontSize: '0.9rem' }}>⚠️ 이 조직은 현재 파일 제출 기능이 제한되어 있습니다.</div>
+                                    )}
                                     {answers[q.id] && (
                                         <div style={{ marginTop: '1rem', color: 'var(--primary)', fontWeight: 'bold' }}>
                                             ✅ {answers[q.id].name}
