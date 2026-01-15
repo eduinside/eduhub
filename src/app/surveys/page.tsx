@@ -62,6 +62,7 @@ export default function SurveysPage() {
     const [description, setDescription] = useState("");
     const [endDate, setEndDate] = useState("");
     const [questions, setQuestions] = useState<Question[]>([]);
+    const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
 
     useEffect(() => {
         if (loading) return;
@@ -119,7 +120,14 @@ export default function SurveysPage() {
             setRespondedSurveyIds(ids);
         });
 
-        return () => { if (unsub) unsub(); unsubResponses(); };
+        // 3. Org Settings
+        const unsubOrg = onSnapshot(doc(db, "organizations", orgId), (snap) => {
+            if (snap.exists()) {
+                setOrgUploadLimit(snap.data().uploadLimit || "3");
+            }
+        });
+
+        return () => { if (unsub) unsub(); unsubResponses(); unsubOrg(); };
     }, [orgId, user]);
 
     const addQuestion = (type: 'text' | 'choice' | 'multiple' | 'notice' | 'file') => {
@@ -333,7 +341,6 @@ export default function SurveysPage() {
                                         <button type="button" onClick={() => addQuestion('choice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 객관식</button>
                                         <button type="button" onClick={() => addQuestion('multiple')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 다중선택</button>
                                         <button type="button" onClick={() => addQuestion('text')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 주관식</button>
-                                        <button type="button" onClick={() => addQuestion('file')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 파일 제출</button>
                                         <button type="button" onClick={() => addQuestion('notice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>+ 설명/자료</button>
                                     </div>
                                 </div>
@@ -381,10 +388,12 @@ export default function SurveysPage() {
 
                                                     <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '1rem' }}>
                                                         <button type="button" onClick={() => handleAddLink(q.id)} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer' }}>🔗 링크 추가</button>
-                                                        <label className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                                            📁 파일 추가
-                                                            <input type="file" hidden onChange={(e) => handleFileChange(q.id, e)} />
-                                                        </label>
+                                                        {orgUploadLimit !== 'blocked' && (
+                                                            <label className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                                📁 파일 추가
+                                                                <input type="file" hidden onChange={(e) => handleFileChange(q.id, e)} />
+                                                            </label>
+                                                        )}
                                                     </div>
                                                 </>
                                             )}

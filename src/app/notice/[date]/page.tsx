@@ -144,6 +144,7 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
     // Loading & Config
     const [isUploading, setIsUploading] = useState(false);
     const [fileLimit, setFileLimit] = useState<number | 'disabled'>(3);
+    const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
     const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
 
     // --- Effects ---
@@ -210,19 +211,19 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
             setTodayReservations(list);
         });
 
-        // 6. Settings & User
-        getDoc(doc(db, "settings", "global_policy")).then(s => {
-            if (s.exists()) {
-                const limit = s.data().fileLimit;
-                setFileLimit(limit === 'disabled' ? 'disabled' : parseInt(limit));
-            }
-        });
         const userRef = doc(db, "users", user.uid);
         const unsubUser = onSnapshot(userRef, (snap) => {
             if (snap.exists()) setReadNoticeIds(snap.data().readNoticeIds || []);
         });
 
-        return () => { unsubGroups(); unsubNotice(); unsubSurvey(); unsubResponse(); unsubResv(); unsubUser(); };
+        // 7. Get Org Upload Limit
+        const unsubOrg = onSnapshot(doc(db, "organizations", orgId), (snap) => {
+            if (snap.exists()) {
+                setOrgUploadLimit(snap.data().uploadLimit || "3");
+            }
+        });
+
+        return () => { unsubGroups(); unsubNotice(); unsubSurvey(); unsubResponse(); unsubResv(); unsubUser(); unsubOrg(); };
     }, [orgId, selectedDate, user, authLoading, pathname, router]);
 
     // Filter & Sort Notices
@@ -441,6 +442,13 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
         } catch (e: any) {
             showToast(e.message || "오류 발생", "error");
         } finally { setIsUploading(false); }
+    };
+
+    const handleFileUploadClick = (e: React.MouseEvent) => {
+        if (orgUploadLimit === 'blocked') {
+            e.preventDefault();
+            showToast("파일 업로드 권한이 없습니다.", "error");
+        }
     };
 
     const openResultModal = async (survey: Survey) => {
@@ -724,7 +732,7 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
                                 <input type="date" value={nEndDate} onChange={e => setNEndDate(e.target.value)} className="glass-card" style={{ padding: '0.8rem' }} required />
                             </div>
                             <textarea value={nContent} onChange={e => setNContent(e.target.value)} placeholder="내용 (Markdown 지원)" className="glass-card" style={{ padding: '0.8rem', minHeight: '200px' }} required />
-                            {fileLimit !== 'disabled' && (
+                            {orgUploadLimit !== 'blocked' && (
                                 <input type="file" multiple onChange={e => setNFiles(Array.from(e.target.files || []))} className="glass-card" style={{ padding: '0.8rem' }} />
                             )}
                             <button type="submit" className="btn-primary" disabled={isUploading}>{isUploading ? '저장 중...' : '저장'}</button>
@@ -749,14 +757,17 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>유형 선택 (복수 선택 가능)</label>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
-                                    {['link', 'file', 'question'].map(t => (
-                                        <label key={t} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <input type="checkbox" checked={sTypes.includes(t as SurveyType)} onChange={e => {
-                                                if (e.target.checked) setSTypes([...sTypes, t as SurveyType]);
-                                                else setSTypes(sTypes.filter(type => type !== t));
-                                            }} /> {t === 'link' ? '링크 연결' : t === 'file' ? '첨부파일 제공' : '문항 작성'}
-                                        </label>
-                                    ))}
+                                    {['link', 'file', 'question'].map(t => {
+                                        if (t === 'file' && orgUploadLimit === 'blocked') return null; // [파일 제출] 유형 제거는 설문 문항 유형에서 해야 함. 여기는 sTypes (설문 구성요소)
+                                        return (
+                                            <label key={t} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <input type="checkbox" checked={sTypes.includes(t as SurveyType)} onChange={e => {
+                                                    if (e.target.checked) setSTypes([...sTypes, t as SurveyType]);
+                                                    else setSTypes(sTypes.filter(type => type !== t));
+                                                }} /> {t === 'link' ? '링크 연결' : t === 'file' ? '첨부파일 제공' : '문항 작성'}
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -764,7 +775,7 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
                                 <input value={sLink} onChange={e => setSLink(e.target.value)} placeholder="링크 URL 입력" className="glass-card" style={{ padding: '0.8rem' }} />
                             )}
 
-                            {sTypes.includes('file') && fileLimit !== 'disabled' && (
+                            {sTypes.includes('file') && orgUploadLimit !== 'blocked' && (
                                 <div>
                                     <label>첨부파일 (참여자에게 제공)</label>
                                     <input type="file" multiple onChange={e => setSFiles(Array.from(e.target.files || []))} className="glass-card" style={{ padding: '0.8rem', width: '100%' }} />
