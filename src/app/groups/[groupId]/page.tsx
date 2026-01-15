@@ -123,7 +123,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
     const [isNoticeSaving, setIsNoticeSaving] = useState(false);
     const [nFiles, setNFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
-    const [editingNotice, setEditingNotice] = useState<any>(null);
+    const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
     const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
 
     // Image Preview State
@@ -281,7 +281,6 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
             setMyResponseIds(snap.docs.map(d => d.data().surveyId));
         });
 
-        // Add unsubResponses to cleanup
         return () => { unsubGroup(); unsubNotice(); unsubSurvey(); unsubResponses(); };
     }, [groupId, user]);
 
@@ -1243,7 +1242,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                 <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                         <h4>문항 관리 ({sQuestions.length})</h4>
-                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <button type="button" onClick={() => addQuestion('choice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 객관식</button>
                                             <button type="button" onClick={() => addQuestion('multiple')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 다중선택</button>
                                             <button type="button" onClick={() => addQuestion('text')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 주관식</button>
@@ -1251,8 +1250,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                                 <button type="button" onClick={() => addQuestion('file')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 파일 제출</button>
                                             )}
                                             <button type="button" onClick={() => addQuestion('notice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>+ 설명/자료</button>
-                                        </div>
-                                    </div>
+                                        </div >
+                                    </div >
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                         {sQuestions.map((q, idx) => (
@@ -1313,11 +1312,11 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+                                </div >
                                 <button type="submit" className="btn-primary" disabled={isUploading}>{isUploading ? '생성 중...' : '설문 생성'}</button>
-                            </form>
-                        </div>
-                    </div>
+                            </form >
+                        </div >
+                    </div >
                 )
             }
             {/* Participate Modal */}

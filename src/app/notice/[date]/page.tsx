@@ -449,6 +449,13 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
         } finally { setIsUploading(false); }
     };
 
+    const handleFileUploadClick = (e: React.MouseEvent) => {
+        if (orgUploadLimit === 'blocked') {
+            e.preventDefault();
+            showToast("파일 업로드 권한이 없습니다.", "error");
+        }
+    };
+
     const openResultModal = async (survey: Survey) => {
         setSelectedSurvey(survey);
         // Load responses
