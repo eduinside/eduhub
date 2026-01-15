@@ -8,6 +8,7 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebas
 import { useRouter, useSearchParams } from "next/navigation";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import ImagePreviewModal from "@/components/ImagePreviewModal";
 
 export default function SurveyResultsPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -21,7 +22,10 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
     const [responses, setResponses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [allUsers, setAllUsers] = useState<any[]>([]);
-    const [userTab, setUserTab] = useState<'responded' | 'unresponded'>('unresponded');
+    const [userTab, setUserTab] = useState<'responded' | 'unresponded'>('responded');
+
+    // Image Preview State
+    const [previewImage, setPreviewImage] = useState<{ url: string, name: string } | null>(null);
 
     useEffect(() => {
         if (authLoading) return;
@@ -134,7 +138,8 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
                     let ans = r.responses[q.id];
 
                     if (q.type === 'file' && ans) {
-                        ans = ans.name || "파일 있음"; // 파일명만 CSV에 기록
+                        const files = Array.isArray(ans) ? ans : [ans];
+                        ans = files.map((f: any) => f.name).join(" | ");
                     } else if (Array.isArray(ans)) {
                         ans = ans.join(" | ");
                     }
@@ -161,52 +166,87 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
             return;
         }
 
-        showToast("파일을 압축 중입니다... 잠시만 기다려주세요.", "info");
+        const totalToDownload = fileQuestions.reduce((acc: number, q: any) => {
+            return acc + responses.reduce((rAcc: number, r: any) => {
+                const ans = r.responses[q.id];
+                if (ans) {
+                    const files = Array.isArray(ans) ? ans : (ans.url ? [ans] : []);
+                    return rAcc + files.filter((f: any) => f.url).length;
+                }
+                return rAcc;
+            }, 0);
+        }, 0);
+
+        if (totalToDownload === 0) {
+            showToast("다운로드할 파일이 없습니다.", "info");
+            return;
+        }
+
+        showToast(`총 ${totalToDownload}개의 파일을 압축 중입니다...`, "info");
 
         const zip = new JSZip();
-        // folder: survey_title
-        const folder = zip.folder(survey.title.replace(/[\/\*\\\:\?\"\<\>\|]/g, "_")) || zip;
+        const rootFolderName = survey.title.replace(/[\/\*\\\:\?\"\<\>\|]/g, "_");
+        const folder = zip.folder(rootFolderName) || zip;
 
-        let count = 0;
-
-        // 병렬 처리를 위한 Promise 배열
+        let downloadedCount = 0;
+        let failedCount = 0;
         const promises: Promise<void>[] = [];
 
         for (const q of fileQuestions) {
-            // 질문별 폴더
-            const qFolderName = `Q${survey.questions.indexOf(q) + 1}_${q.text.replace(/[\/\*\\\:\?\"\<\>\|]/g, "_").slice(0, 15)}`;
+            const qIndex = survey.questions.indexOf(q);
+            const qFolderName = `Q${qIndex + 1}_${q.text.replace(/[\/\*\\\:\?\"\<\>\|]/g, "_").slice(0, 15)}`;
             const qFolder = folder.folder(qFolderName) || folder;
 
             for (const r of responses) {
                 const ans = r.responses[q.id];
-                if (ans && ans.url) {
-                    const p = (async () => {
-                        try {
-                            const response = await fetch(ans.url);
-                            const blob = await response.blob();
+                if (ans) {
+                    const files = Array.isArray(ans) ? ans : (ans.url ? [ans] : []);
+                    for (const file of files) {
+                        if (file.url) {
+                            const p = (async () => {
+                                try {
+                                    // CORS 이슈를 대비해 fetch 시도
+                                    const response = await fetch(file.url, { method: 'GET' });
+                                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                            // Filename: UserName_FileName
-                            // Remove invalid chars
-                            const safeName = (r.userName || "익명").replace(/[\/\*\\\:\?\"\<\>\|]/g, "_");
-                            const fileName = `${safeName}_${ans.name}`;
-                            qFolder.file(fileName, blob);
-                            count++;
-                        } catch (e) {
-                            console.error("File fetch error:", e);
+                                    const blob = await response.blob();
+                                    const safeUserName = (r.userName || "익명").replace(/[\/\*\\\:\?\"\<\>\|]/g, "_");
+                                    const safeFileName = file.name.replace(/[\/\*\\\:\?\"\<\>\|]/g, "_");
+                                    const fileName = `${safeUserName}_${safeFileName}`;
+
+                                    qFolder.file(fileName, blob);
+                                    downloadedCount++;
+                                } catch (e) {
+                                    console.error(`Failed to download ${file.name}:`, e);
+                                    failedCount++;
+                                }
+                            })();
+                            promises.push(p);
                         }
-                    })();
-                    promises.push(p);
+                    }
                 }
             }
         }
 
         await Promise.all(promises);
 
-        if (count === 0) { showToast("다운로드할 파일이 없습니다.", "error"); return; }
+        if (downloadedCount === 0) {
+            showToast("파일을 가져오는 데 실패했습니다. CORS 정책이나 네트워크 상태를 확인해 주세요.", "error");
+            return;
+        }
 
-        const content = await zip.generateAsync({ type: "blob" });
-        saveAs(content, `${survey.title}_첨부파일.zip`);
-        showToast("압축 파일 다운로드가 시작되었습니다.", "success");
+        if (failedCount > 0) {
+            showToast(`${failedCount}개의 파일 다운로드에 실패했지만, 나머지 ${downloadedCount}개를 압축합니다.`, "info");
+        }
+
+        try {
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, `${rootFolderName}_첨부파일.zip`);
+            showToast("압축 파일 다운로드가 시작되었습니다.", "success");
+        } catch (err) {
+            console.error("ZIP Generation error:", err);
+            showToast("압축 파일 생성 중 오류가 발생했습니다.", "error");
+        }
     };
 
     if (loading || authLoading) return <div style={{ padding: '4rem', textAlign: 'center' }}>로딩 중...</div>;
@@ -217,7 +257,11 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
         if (q.type === 'notice') return null; // Skip notice
 
         if (q.type === 'text' || q.type === 'file') {
-            const answers = responses.map(r => r.responses[q.id]).filter(Boolean);
+            const rawAnswers = responses.map(r => r.responses[q.id]).filter(Boolean);
+            let answers = rawAnswers;
+            if (q.type === 'file') {
+                answers = rawAnswers.flatMap(ans => Array.isArray(ans) ? ans : [ans]);
+            }
             return { ...q, type: q.type, answers };
         } else {
             const counts: { [key: string]: number } = {};
@@ -297,9 +341,37 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
                                     {stat.answers.length > 0 ? (
                                         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {stat.answers.map((ans: any, i: number) => (
-                                                <li key={i} style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>📁 {ans.name}</span>
-                                                    <a href={ans.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontSize: '0.8rem' }}>보기</a>
+                                                <li key={i} style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                                                        📁 {ans.name}
+                                                    </span>
+                                                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                                                        {/\.(jpg|jpeg|png|webp|heic)$/i.test(ans.name || "") ? (
+                                                            <button
+                                                                onClick={() => setPreviewImage({ url: ans.url, name: ans.name })}
+                                                                className="btn-primary"
+                                                                style={{
+                                                                    padding: '0.3rem 0.8rem',
+                                                                    fontSize: '0.75rem',
+                                                                    borderRadius: '8px',
+                                                                    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                                                                    boxShadow: '0 2px 10px rgba(99, 102, 241, 0.2)'
+                                                                }}
+                                                            >
+                                                                🖼️ 미리보기
+                                                            </button>
+                                                        ) : (
+                                                            <a
+                                                                href={ans.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="glass-card"
+                                                                style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem', color: 'var(--text-main)', textDecoration: 'none' }}
+                                                            >
+                                                                🔗 보기
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </li>
                                             ))}
                                         </ul>
@@ -366,18 +438,6 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
 
                     <div style={{ display: 'flex', background: 'var(--bg-elevated)', borderRadius: '8px', padding: '0.2rem', marginBottom: '1rem' }}>
                         <button
-                            onClick={() => setUserTab('unresponded')}
-                            style={{
-                                flex: 1, padding: '0.6rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.85rem',
-                                background: userTab === 'unresponded' ? 'white' : 'transparent',
-                                color: userTab === 'unresponded' ? 'black' : 'var(--text-dim)',
-                                boxShadow: userTab === 'unresponded' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none',
-                                fontWeight: userTab === 'unresponded' ? 'bold' : 'normal'
-                            }}
-                        >
-                            미응답 ({unrespondedUsersList.length})
-                        </button>
-                        <button
                             onClick={() => setUserTab('responded')}
                             style={{
                                 flex: 1, padding: '0.6rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.85rem',
@@ -388,6 +448,18 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
                             }}
                         >
                             응답 ({respondedUsersList.length})
+                        </button>
+                        <button
+                            onClick={() => setUserTab('unresponded')}
+                            style={{
+                                flex: 1, padding: '0.6rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.85rem',
+                                background: userTab === 'unresponded' ? 'white' : 'transparent',
+                                color: userTab === 'unresponded' ? 'black' : 'var(--text-dim)',
+                                boxShadow: userTab === 'unresponded' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none',
+                                fontWeight: userTab === 'unresponded' ? 'bold' : 'normal'
+                            }}
+                        >
+                            미응답 ({unrespondedUsersList.length})
                         </button>
                     </div>
 
@@ -406,6 +478,14 @@ export default function SurveyResultsPage(props: { params: Promise<{ id: string 
                     </div>
                 </div>
             </aside>
+
+            {/* Image Preview Modal */}
+            <ImagePreviewModal
+                isOpen={!!previewImage}
+                onClose={() => setPreviewImage(null)}
+                imageUrl={previewImage?.url || ""}
+                fileName={previewImage?.name}
+            />
         </main>
     );
 }

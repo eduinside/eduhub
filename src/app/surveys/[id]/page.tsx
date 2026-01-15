@@ -10,8 +10,10 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { formatDate } from "@/utils/dateUtils";
 import { compressImage } from "@/utils/fileUtils";
+import { saveAs } from "file-saver";
+import ImagePreviewModal from "@/components/ImagePreviewModal";
 
-export default function SurveyDetailPage(props: { params: Promise<{ id: string }> }) {
+export default function ParticipateSurveyPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { user, loading: authLoading } = useAuth();
     const { showToast } = useToast();
@@ -28,6 +30,10 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
     const [submitting, setSubmitting] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
+
+    // Image Preview State
+    const [previewImage, setPreviewImage] = useState<{ url: string, name: string } | null>(null);
+
     useEffect(() => {
         if (authLoading) return;
         if (!user) {
@@ -116,8 +122,8 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
     };
 
     const handleFileUpload = async (qId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
         if (!user) return;
 
         try {
@@ -136,31 +142,49 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
                 }
             }
 
-            const compressedFile = await compressImage(file);
-            if (compressedFile.size > limitBytes) {
-                showToast(`용량 초과! (${(limitBytes / 1024 / 1024).toFixed(0)}MB 제한)`, "error");
-                return;
+            const uploadedFiles = [];
+            for (const file of files) {
+                const compressedFile = await compressImage(file);
+                if (compressedFile.size > limitBytes) {
+                    showToast(`용량 초과! (${file.name} - ${(limitBytes / 1024 / 1024).toFixed(0)}MB 제한)`, "error");
+                    continue; // Skip this file and try others
+                }
+
+                const storageRef = ref(storage, `surveys/responses/${survey.id}/${user.uid}/${Date.now()}_${compressedFile.name}`);
+                showToast(`${file.name} 업로드 중...`, "info");
+                const snapshot = await uploadBytes(storageRef, compressedFile);
+                const url = await getDownloadURL(snapshot.ref);
+
+                // Update Stats
+                if (orgId) {
+                    await updateDoc(doc(db, "organizations", orgId), {
+                        "storageUsage.totalFiles": increment(1),
+                        "storageUsage.totalBytes": increment(compressedFile.size)
+                    });
+                }
+
+                uploadedFiles.push({ type: 'file', name: file.name, url });
             }
 
-            const storageRef = ref(storage, `surveys/responses/${survey.id}/${user.uid}/${Date.now()}_${compressedFile.name}`);
-            showToast("파일 업로드 중...", "info");
-            const snapshot = await uploadBytes(storageRef, compressedFile);
-            const url = await getDownloadURL(snapshot.ref);
+            if (uploadedFiles.length === 0) return;
 
-            // Update Stats
-            if (orgId) {
-                await updateDoc(doc(db, "organizations", orgId), {
-                    "storageUsage.totalFiles": increment(1),
-                    "storageUsage.totalBytes": increment(compressedFile.size)
-                });
-            }
+            const existing = answers[qId] || [];
+            const currentFiles = Array.isArray(existing) ? existing : (existing.type === 'file' ? [existing] : []);
 
-            setAnswers({ ...answers, [qId]: { type: 'file', name: file.name, url } });
-            showToast("파일이 첨부되었습니다.", "success");
+            setAnswers({ ...answers, [qId]: [...currentFiles, ...uploadedFiles] });
+            showToast(`${uploadedFiles.length}개의 파일이 첨부되었습니다.`, "success");
         } catch (err) {
             console.error(err);
             showToast("파일 업로드 실패", "error");
         }
+    };
+
+    const handleRemoveFile = (qId: string, index: number) => {
+        const existing = answers[qId];
+        if (!Array.isArray(existing)) return;
+        const newFiles = [...existing];
+        newFiles.splice(index, 1);
+        setAnswers({ ...answers, [qId]: newFiles.length > 0 ? newFiles : undefined });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -273,7 +297,21 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
                                         {att.type === 'link' ? (
                                             <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline', wordBreak: 'break-all' }}>{att.name || att.url}</a>
                                         ) : (
-                                            <a href={att.url} target="_blank" rel="noopener noreferrer" download style={{ color: 'var(--text-main)', textDecoration: 'underline', wordBreak: 'break-all' }}>{att.name || "첨부파일 다운로드"}</a>
+                                            <>
+                                                {/\.(jpg|jpeg|png|webp|heic)$/i.test(att.name || "") ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                                                        <img
+                                                            src={att.url}
+                                                            alt={att.name}
+                                                            style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', cursor: 'pointer', objectFit: 'contain', background: 'rgba(0,0,0,0.05)' }}
+                                                            onClick={() => setPreviewImage({ url: att.url, name: att.name || "이미지" })}
+                                                        />
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{att.name}</span>
+                                                    </div>
+                                                ) : (
+                                                    <a href={att.url} target="_blank" rel="noopener noreferrer" download style={{ color: 'var(--text-main)', textDecoration: 'underline', wordBreak: 'break-all' }}>{att.name || "첨부파일 다운로드"}</a>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 ))}
@@ -295,17 +333,53 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
                                 <div style={{ padding: '2rem', border: '2px dashed var(--border-glass)', borderRadius: '12px', textAlign: 'center', background: 'rgba(0,0,0,0.02)' }}>
                                     {orgUploadLimit !== 'blocked' ? (
                                         <>
-                                            <input type="file" id={`file-${q.id}`} onChange={(e) => handleFileUpload(q.id, e)} style={{ display: 'none' }} />
+                                            <input type="file" id={`file-${q.id}`} multiple onChange={(e) => handleFileUpload(q.id, e)} style={{ display: 'none' }} />
                                             <label htmlFor={`file-${q.id}`} className="glass-card" style={{ cursor: 'pointer', padding: '0.8rem 2rem', borderRadius: '99px', display: 'inline-block', fontWeight: 'bold', color: 'var(--primary)' }}>
-                                                📁 파일 선택
+                                                📁 파일 선택 (여러 개 가능)
                                             </label>
                                         </>
                                     ) : (
                                         <div style={{ color: '#ff4444', fontSize: '0.9rem' }}>⚠️ 이 조직은 현재 파일 제출 기능이 제한되어 있습니다.</div>
                                     )}
                                     {answers[q.id] && (
-                                        <div style={{ marginTop: '1rem', color: 'var(--primary)', fontWeight: 'bold' }}>
-                                            ✅ {answers[q.id].name}
+                                        <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left' }}>
+                                            {(() => {
+                                                const files = Array.isArray(answers[q.id]) ? answers[q.id] : (answers[q.id].type === 'file' ? [answers[q.id]] : []);
+                                                return files.map((file: any, fIdx: number) => {
+                                                    const isImage = /\.(jpg|jpeg|png|webp|heic)$/i.test(file.name);
+                                                    return (
+                                                        <div key={fIdx} className="glass-card" style={{ padding: '0.8rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', overflow: 'hidden' }}>
+                                                                <span style={{ fontSize: '1.2rem' }}>{isImage ? '🖼️' : '📄'}</span>
+                                                                <div style={{ overflow: 'hidden' }}>
+                                                                    <a href={file.url} target="_blank" rel="noopener noreferrer" download style={{ fontSize: '0.9rem', color: 'var(--text-main)', textDecoration: 'underline', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                                                        {file.name}
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                                {isImage && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+                                                                        className="glass-card"
+                                                                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', color: 'var(--primary)', cursor: 'pointer', border: 'none' }}
+                                                                    >
+                                                                        미리보기
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveFile(q.id, fIdx)}
+                                                                    style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '1.2rem' }}
+                                                                >
+                                                                    &times;
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     )}
                                 </div>
@@ -370,6 +444,14 @@ export default function SurveyDetailPage(props: { params: Promise<{ id: string }
                     {submitting ? "처리 중..." : (isEditMode ? "수정하기" : "제출하기")}
                 </button>
             </form>
+
+            {/* Image Preview Modal */}
+            <ImagePreviewModal
+                isOpen={!!previewImage}
+                onClose={() => setPreviewImage(null)}
+                imageUrl={previewImage?.url || ""}
+                fileName={previewImage?.name}
+            />
         </main>
     );
 }

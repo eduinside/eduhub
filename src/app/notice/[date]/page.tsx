@@ -9,8 +9,10 @@ import {
     deleteDoc, doc, updateDoc, getDoc, arrayUnion, getDocs, increment
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, listAll, getMetadata } from "firebase/storage";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ImagePreviewModal from "@/components/ImagePreviewModal";
 import { useRouter, usePathname } from "next/navigation";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -112,6 +114,9 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
     const [isSurveyResultModalOpen, setIsSurveyResultModalOpen] = useState(false);
 
     const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+
+    // Image Preview State
+    const [previewImage, setPreviewImage] = useState<{ url: string, name: string } | null>(null);
 
     // --- Forms & Inputs ---
 
@@ -578,11 +583,26 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
                                         {/* 첨부파일 */}
                                         {n.attachments && n.attachments.length > 0 && (
                                             <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                {n.attachments.map((file, i) => (
-                                                    <a key={i} href={file.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="glass-card" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', textDecoration: 'none', color: 'var(--primary)' }}>
-                                                        📎 {file.name}
-                                                    </a>
-                                                ))}
+                                                {n.attachments.map((file, i) => {
+                                                    const isImage = /\.(jpg|jpeg|png|webp|heic)$/i.test(file.name);
+                                                    if (isImage) {
+                                                        return (
+                                                            <button
+                                                                key={i}
+                                                                onClick={(e) => { e.stopPropagation(); setPreviewImage({ url: file.url, name: file.name }); }}
+                                                                className="glass-card"
+                                                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: 'var(--primary)', border: '1px solid var(--primary)', cursor: 'pointer' }}
+                                                            >
+                                                                🖼️ {file.name} (미리보기)
+                                                            </button>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <a key={i} href={file.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="glass-card" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', textDecoration: 'none', color: 'var(--primary)' }}>
+                                                            📎 {file.name}
+                                                        </a>
+                                                    );
+                                                })}
                                             </div>
                                         )}
 
@@ -704,6 +724,14 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
 
                 </aside>
             </div>
+
+            {/* Image Preview Modal */}
+            <ImagePreviewModal
+                isOpen={!!previewImage}
+                onClose={() => setPreviewImage(null)}
+                imageUrl={previewImage?.url || ""}
+                fileName={previewImage?.name}
+            />
 
             <style jsx>{`
                 @media (max-width: 1000px) {

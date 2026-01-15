@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import NavMenu from "./navbar/NavMenu";
 import OrgSelector from "./navbar/OrgSelector";
 import UserMenu from "./navbar/UserMenu";
+import { APP_CONFIG } from "@/config/app";
 
 export default function Navbar() {
     const { user } = useAuth();
@@ -31,7 +32,7 @@ export default function Navbar() {
                     href={pathname.startsWith("/admin/super") ? "/admin/super" : pathname.startsWith("/admin/org") ? "/admin/org" : "/"}
                     style={{ textDecoration: 'none', fontWeight: 'bold', fontSize: '1.2rem', color: isAdminPage ? 'var(--accent)' : 'var(--primary)', letterSpacing: '-0.5px' }}
                 >
-                    EduHub {isAdminPage && <span style={{ fontSize: '0.75rem', verticalAlign: 'middle', marginLeft: '0.4rem', background: 'var(--accent)', color: 'white', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>Admin</span>}
+                    {APP_CONFIG.APP_NAME} {isAdminPage && <span style={{ fontSize: '0.75rem', verticalAlign: 'middle', marginLeft: '0.4rem', background: 'var(--accent)', color: 'white', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>Admin</span>}
                 </Link>
 
                 <NavMenu />

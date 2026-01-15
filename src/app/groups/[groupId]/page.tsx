@@ -3,10 +3,10 @@
 import { useState, useEffect, use, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import { db, storage } from "@/lib/firebase";
+import { db, storage, auth } from "@/lib/firebase";
 import {
     collection, onSnapshot, query, where, orderBy, addDoc, serverTimestamp,
-    deleteDoc, doc, updateDoc, getDoc, getDocs, arrayUnion, arrayRemove, setDoc, increment
+    deleteDoc, doc, updateDoc, getDoc, getDocs, arrayUnion, arrayRemove, limit, setDoc, increment
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ReactMarkdown from "react-markdown";
@@ -16,6 +16,7 @@ import Link from "next/link";
 import * as XLSX from 'xlsx';
 import { formatDate } from "@/utils/dateUtils";
 import { compressImage } from "@/utils/fileUtils";
+import ImagePreviewModal from "@/components/ImagePreviewModal";
 
 // --- Interfaces ---
 interface Group {
@@ -118,11 +119,15 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
     const [nTitle, setNTitle] = useState("");
     const [nContent, setNContent] = useState("");
     const [nStartDate, setNStartDate] = useState(new Date().toISOString().slice(0, 10));
-    const [nEndDate, setNEndDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+    const [nEndDate, setNEndDate] = useState("");
+    const [isNoticeSaving, setIsNoticeSaving] = useState(false);
     const [nFiles, setNFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
-    const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+    const [editingNotice, setEditingNotice] = useState<any>(null);
     const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
+
+    // Image Preview State
+    const [previewImage, setPreviewImage] = useState<{ url: string, name: string } | null>(null);
 
     // Survey Form
     const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
@@ -842,6 +847,14 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                         </form>
                     </div>
                 )}
+                {/* Image Preview Modal */}
+                <ImagePreviewModal
+                    isOpen={!!previewImage}
+                    onClose={() => setPreviewImage(null)}
+                    imageUrl={previewImage?.url || ""}
+                    fileName={previewImage?.name}
+                />
+
                 <style jsx>{`
                     .hide-scrollbar::-webkit-scrollbar {
                         display: none;
@@ -905,9 +918,24 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                         </div>
                                         {n.attachments && n.attachments.length > 0 && (
                                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.2rem' }}>
-                                                {n.attachments.map((f: any, i: number) => (
-                                                    <a key={i} href={f.url} target="_blank" className="glass-card" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none', color: 'var(--primary)' }}>📎 {f.name}</a>
-                                                ))}
+                                                {n.attachments.map((f: any, i: number) => {
+                                                    const isImage = /\.(jpg|jpeg|png|webp|heic)$/i.test(f.name);
+                                                    if (isImage) {
+                                                        return (
+                                                            <button
+                                                                key={i}
+                                                                onClick={(e) => { e.stopPropagation(); setPreviewImage({ url: f.url, name: f.name }); }}
+                                                                className="glass-card"
+                                                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: 'var(--primary)', border: '1px solid var(--primary)', cursor: 'pointer' }}
+                                                            >
+                                                                🖼️ {f.name} (미리보기)
+                                                            </button>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <a key={i} href={f.url} target="_blank" className="glass-card" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none', color: 'var(--primary)' }}>📎 {f.name}</a>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                         <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', borderTop: '1px solid var(--border-glass)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

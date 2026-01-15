@@ -65,6 +65,7 @@ export default function SuperAdminPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [orgNotices, setOrgNotices] = useState<Notice[]>([]); // 통계용
     const [policies, setPolicies] = useState<any>({ fileLimit: "3" });
+    const [pendingFeedbackCount, setPendingFeedbackCount] = useState(0);
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
@@ -104,9 +105,17 @@ export default function SuperAdminPage() {
             setOrgNotices(orgSpecific);
         });
 
+        // 미답변 문의 개수
+        const unsubFeedback = onSnapshot(
+            query(collection(db, "feedback"), where("status", "==", "pending")),
+            (snapshot) => {
+                setPendingFeedbackCount(snapshot.size);
+            }
+        );
+
         getDoc(doc(db, "settings", "global_policy")).then(s => { if (s.exists()) setPolicies(s.data()); });
 
-        return () => { unsubOrgs(); unsubUsers(); unsubNotices(); };
+        return () => { unsubOrgs(); unsubUsers(); unsubNotices(); unsubFeedback(); };
     }, [isSuperAdmin]);
 
     const getOrgStats = (orgId: string) => {
@@ -331,6 +340,15 @@ export default function SuperAdminPage() {
                         <div className="glass-card" style={{ padding: '2rem', borderLeft: '4px solid var(--accent)' }}>
                             <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>조직 내 공지 수</p>
                             <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{orgNotices.length}건</p>
+                        </div>
+                        <div className="glass-card" style={{ padding: '2rem', borderLeft: pendingFeedbackCount > 0 ? '4px solid #ff4444' : '4px solid var(--border-glass)' }}>
+                            <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>미답변 문의</p>
+                            <p style={{ fontSize: '2rem', fontWeight: 'bold', color: pendingFeedbackCount > 0 ? '#ff4444' : 'var(--text-dim)' }}>{pendingFeedbackCount}건</p>
+                            <p style={{ fontSize: '0.8rem', marginTop: '0.5rem', opacity: 0.7 }}>
+                                {pendingFeedbackCount > 0 ? (
+                                    <Link href="/admin/feedback" style={{ color: '#ff4444', textDecoration: 'underline' }}>답변하러 가기 →</Link>
+                                ) : '모든 문의 처리 완료'}
+                            </p>
                         </div>
                     </div>
                 </div>

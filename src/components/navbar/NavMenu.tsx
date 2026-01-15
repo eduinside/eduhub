@@ -82,9 +82,11 @@ export default function NavMenu() {
         ...(pathname.startsWith("/admin/super") ? [
             { href: '/admin/super', icon: '⚙️', label: '시스템 관리', active: pathname === '/admin/super' },
             { href: '/admin/super/notices', icon: '📢', label: '전체 공지', active: pathname.startsWith('/admin/super/notices') },
-            { href: '/admin/super/bookmarks', icon: '⭐', label: '전체 즐겨찾기', active: pathname.startsWith('/admin/super/bookmarks') }
+            { href: '/admin/super/bookmarks', icon: '⭐', label: '전체 즐겨찾기', active: pathname.startsWith('/admin/super/bookmarks') },
+            { href: '/admin/super/feedback', icon: '💬', label: '문의', active: pathname.startsWith('/admin/super/feedback') }
         ] : [
-            { href: '/admin/org', icon: '⚙️', label: '조직 관리', active: pathname.startsWith('/admin/org') }
+            { href: '/admin/org', icon: '⚙️', label: '조직 관리', active: pathname.startsWith('/admin/org') },
+            { href: '/admin/feedback', icon: '💬', label: '문의', active: pathname.startsWith('/admin/feedback') }
         ])
     ];
 
