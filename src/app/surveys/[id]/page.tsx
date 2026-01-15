@@ -30,12 +30,9 @@ export default function ParticipateSurveyPage(props: { params: Promise<{ id: str
     const [submitting, setSubmitting] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [orgUploadLimit, setOrgUploadLimit] = useState<string>("3");
-<<<<<<< HEAD
-=======
 
     // Image Preview State
     const [previewImage, setPreviewImage] = useState<{ url: string, name: string } | null>(null);
->>>>>>> dev
 
     useEffect(() => {
         if (authLoading) return;
@@ -336,15 +333,9 @@ export default function ParticipateSurveyPage(props: { params: Promise<{ id: str
                                 <div style={{ padding: '2rem', border: '2px dashed var(--border-glass)', borderRadius: '12px', textAlign: 'center', background: 'rgba(0,0,0,0.02)' }}>
                                     {orgUploadLimit !== 'blocked' ? (
                                         <>
-<<<<<<< HEAD
-                                            <input type="file" id={`file-${q.id}`} onChange={(e) => handleFileUpload(q.id, e)} style={{ display: 'none' }} />
-                                            <label htmlFor={`file-${q.id}`} className="glass-card" style={{ cursor: 'pointer', padding: '0.8rem 2rem', borderRadius: '99px', display: 'inline-block', fontWeight: 'bold', color: 'var(--primary)' }}>
-                                                📁 파일 선택
-=======
                                             <input type="file" id={`file-${q.id}`} multiple onChange={(e) => handleFileUpload(q.id, e)} style={{ display: 'none' }} />
                                             <label htmlFor={`file-${q.id}`} className="glass-card" style={{ cursor: 'pointer', padding: '0.8rem 2rem', borderRadius: '99px', display: 'inline-block', fontWeight: 'bold', color: 'var(--primary)' }}>
                                                 📁 파일 선택 (여러 개 가능)
->>>>>>> dev
                                             </label>
                                         </>
                                     ) : (
