@@ -1,0 +1,22 @@
+{
+    "name": "EduHub - 교원 업무 지원 시스템",
+    "short_name": "EduHub",
+    "description": "실시간 공지, 예약, 설문을 한 번에 관리하는 교원 맞춤형 워크스페이스",
+    "icons": [
+        {
+            "src": "/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait"
+}
