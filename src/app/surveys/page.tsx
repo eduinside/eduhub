@@ -341,6 +341,9 @@ export default function SurveysPage() {
                                         <button type="button" onClick={() => addQuestion('choice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 객관식</button>
                                         <button type="button" onClick={() => addQuestion('multiple')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 다중선택</button>
                                         <button type="button" onClick={() => addQuestion('text')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 주관식</button>
+                                        {orgUploadLimit !== 'blocked' && (
+                                            <button type="button" onClick={() => addQuestion('file')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>+ 파일 제출</button>
+                                        )}
                                         <button type="button" onClick={() => addQuestion('notice')} className="glass-card" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>+ 설명/자료</button>
                                     </div>
                                 </div>

@@ -104,7 +104,8 @@ export default function OrgAdminPage() {
         privateGroups: 0,
         uploadLimit: '',
         totalFiles: 0,
-        totalBytes: 0
+        totalBytes: 0,
+        pendingFeedback: 0
     });
 
     useEffect(() => {
@@ -196,6 +197,16 @@ export default function OrgAdminPage() {
             }));
         });
 
+        // 6. 미답변 문의 개수
+        const qFeedback = query(
+            collection(db, "feedback"),
+            where("orgId", "==", orgId),
+            where("status", "==", "pending")
+        );
+        const unsubFeedback = onSnapshot(qFeedback, (snapshot) => {
+            setStats(prev => ({ ...prev, pendingFeedback: snapshot.size }));
+        });
+
 
         return () => {
             unsubOrg();
@@ -204,6 +215,7 @@ export default function OrgAdminPage() {
             unsubOrgLinks();
             unsubGlobalLinks();
             unsubGroups();
+            unsubFeedback();
         };
     }, [isAdmin, orgId]);
 
@@ -541,6 +553,15 @@ export default function OrgAdminPage() {
                             <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>공용 즐겨찾기</div>
                             <div style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--success)' }}>{stats.bookmarkCount}개</div>
                             <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', opacity: 0.7 }}>조직원 공용 링크</div>
+                        </div>
+                        <div className="glass-card" style={{ padding: '2rem', textAlign: 'center', borderLeft: stats.pendingFeedback > 0 ? '4px solid #ff4444' : 'none' }}>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>미답변 문의</div>
+                            <div style={{ fontSize: '2.5rem', fontWeight: '800', color: stats.pendingFeedback > 0 ? '#ff4444' : 'var(--text-dim)' }}>{stats.pendingFeedback}건</div>
+                            <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', opacity: 0.7 }}>
+                                {stats.pendingFeedback > 0 ? (
+                                    <Link href="/admin/feedback" style={{ color: '#ff4444', textDecoration: 'underline' }}>답변하러 가기 →</Link>
+                                ) : '모든 문의 처리 완료'}
+                            </div>
                         </div>
                     </div>
 

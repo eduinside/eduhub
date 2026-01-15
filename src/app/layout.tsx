@@ -4,10 +4,12 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import Navbar from "@/components/Navbar";
 import OrgStatusGuard from "@/components/OrgStatusGuard";
+import Footer from "@/components/Footer";
+import { APP_CONFIG } from "@/config/app";
 
 export const metadata: Metadata = {
-  title: "EduHub - 교원 업무 지원 시스템",
-  description: "실시간 공지, 예약, 설문을 한 번에 관리하는 교원 맞춤형 워크스페이스",
+  title: `${APP_CONFIG.APP_NAME} - 교원 업무 지원 시스템`,
+  description: APP_CONFIG.APP_DESCRIPTION,
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192x192.png",
@@ -38,6 +40,7 @@ export default function RootLayout({
               <OrgStatusGuard>
                 {children}
               </OrgStatusGuard>
+              <Footer />
             </div>
           </AuthProvider>
         </ToastProvider>

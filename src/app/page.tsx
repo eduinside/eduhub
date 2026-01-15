@@ -18,6 +18,8 @@ import {
 } from "firebase/auth";
 import { useGroupStatus } from "@/hooks/useGroupStatus";
 import { formatDate } from "@/utils/dateUtils";
+import { APP_CONFIG } from "@/config/app";
+import LandingPage from "@/components/LandingPage";
 
 // Redirect handler component wrapped in Suspense
 function RedirectHandler() {
@@ -57,6 +59,7 @@ export default function Home() {
   const [joining, setJoining] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [readNoticeIds, setReadNoticeIds] = useState<string[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(true);
 
   const [userName, setUserName] = useState("");
   const [userDept, setUserDept] = useState("");
@@ -335,6 +338,7 @@ export default function Home() {
         return b.startDate.localeCompare(a.startDate);
       });
       setTodayNotices(sorted);
+      setNoticesLoading(false);
     });
 
     const userRef = doc(db, "users", user.uid);
@@ -509,53 +513,58 @@ export default function Home() {
           </div>
         )}
 
-        <section className="animate-fade" style={{ marginBottom: '4rem', textAlign: 'center' }}>
-          <h1 className="text-gradient" style={{ fontSize: '3.5rem', fontWeight: '700', marginBottom: '1rem' }}>EduHub Workspace</h1>
-          <p style={{ color: 'var(--text-dim)', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto' }}>{orgName ? `${orgName} 구성원의 효율적인 업무를 돕는 협업 플랫폼입니다.` : '구성원의 효율적인 업무를 돕는 협업 플랫폼입니다.'}</p>
-        </section>
+        {user && (
+          <section className="animate-fade" style={{ marginBottom: '4rem', textAlign: 'center' }}>
+            <h1 className="text-gradient" style={{ fontSize: '3.5rem', fontWeight: '700', marginBottom: '1rem' }}>EduHub Workspace</h1>
+            <p style={{ color: 'var(--text-dim)', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto' }}>{orgName ? `${orgName} 구성원의 효율적인 업무를 돕는 협업 플랫폼입니다.` : '구성원의 효율적인 업무를 돕는 협업 플랫폼입니다.'}</p>
+          </section>
+        )}
 
         {!user ? (
-          <section className="glass-panel animate-fade" style={{ padding: '3rem', textAlign: 'center', marginBottom: '3rem', maxWidth: '500px', margin: '0 auto 3rem' }}>
-            <h2 style={{ marginBottom: '1.5rem' }}>{isSignMode ? "🚀 회원가입" : "👋 반가워요!"}</h2>
+          <LandingPage>
+            <section className="glass-panel animate-fade" style={{ padding: '3rem', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
+              <h2 style={{ marginBottom: '0.5rem' }}>{isSignMode ? "🚀 회원가입" : "👋 반가워요!"}</h2>
+              <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>이메일 또는 Google 계정으로 간편하게</p>
 
-            <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-              {isSignMode && (
-                <>
-                  <input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="성함" className="glass-card" style={{ padding: '1rem' }} required />
-                  <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="조직 초대 코드 (필수)" className="glass-card" style={{ padding: '1rem', border: '1px solid var(--primary-light)' }} required />
-                </>
+              <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                {isSignMode && (
+                  <>
+                    <input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="성함" className="glass-card" style={{ padding: '1rem' }} required />
+                    <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="조직 초대 코드 (필수)" className="glass-card" style={{ padding: '1rem', border: '1px solid var(--primary-light)' }} required />
+                  </>
+                )}
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="이메일 주소" className="glass-card" style={{ padding: '1rem' }} required />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호" className="glass-card" style={{ padding: '1rem' }} required />
+
+                <button type="submit" className="btn-primary" style={{ padding: '1rem', fontSize: '1.1rem' }} disabled={pending}>
+                  {pending ? "처리 중..." : (isSignMode ? "가입하기" : "로그인")}
+                </button>
+              </form>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                <span style={{ color: 'var(--text-dim)' }}>
+                  {isSignMode ? "이미 계정이 있으신가요?" : "아직 계정이 없으신가요?"}
+                </span>
+                <button onClick={() => { setIsSignMode(!isSignMode); setUserName(""); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 'bold' }}>
+                  {isSignMode ? "로그인하기" : "회원가입"}
+                </button>
+              </div>
+
+              {!isSignMode && (
+                <button onClick={handleResetPassword} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.8rem', cursor: 'pointer', marginBottom: '1rem' }}>
+                  비밀번호를 잊으셨나요?
+                </button>
               )}
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="이메일 주소" className="glass-card" style={{ padding: '1rem' }} required />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호" className="glass-card" style={{ padding: '1rem' }} required />
 
-              <button type="submit" className="btn-primary" style={{ padding: '1rem', fontSize: '1.1rem' }} disabled={pending}>
-                {pending ? "처리 중..." : (isSignMode ? "가입하기" : "로그인")}
-              </button>
-            </form>
-
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', fontSize: '0.9rem', marginBottom: '2rem' }}>
-              <span style={{ color: 'var(--text-dim)' }}>
-                {isSignMode ? "이미 계정이 있으신가요?" : "아직 계정이 없으신가요?"}
-              </span>
-              <button onClick={() => { setIsSignMode(!isSignMode); setUserName(""); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 'bold' }}>
-                {isSignMode ? "로그인하기" : "회원가입"}
-              </button>
-            </div>
-
-            {!isSignMode && (
-              <button onClick={handleResetPassword} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.8rem', cursor: 'pointer', marginBottom: '1rem' }}>
-                비밀번호를 잊으셨나요?
-              </button>
-            )}
-
-            <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>또는 소셜 계정으로 로그인</p>
-              <button onClick={handleLogin} className="glass-card" style={{ padding: '0.8rem 2rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                <img src="https://www.google.com/favicon.ico" alt="google" style={{ width: '16px' }} />
-                Google로 시작하기
-              </button>
-            </div>
-          </section>
+              <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>또는 소셜 계정으로 로그인</p>
+                <button onClick={handleLogin} className="glass-card" style={{ padding: '0.8rem 2rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <img src="https://www.google.com/favicon.ico" alt="google" style={{ width: '16px' }} />
+                  Google로 시작하기
+                </button>
+              </div>
+            </section>
+          </LandingPage>
         ) : (orgIds.length === 0 && !loading) ? (
           <section className="glass-panel animate-fade" style={{ padding: '3rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
             <h2 style={{ marginBottom: '1rem', textAlign: 'center' }}>🚀 조직 합류하기</h2>
@@ -570,14 +579,82 @@ export default function Home() {
           </section>
         ) : (
           <>
-            <section className="glass-panel animate-fade" style={{ padding: '2rem', marginBottom: '3rem' }}>
+            {/* Quick Stats Grid - Moved to Top & Simplified */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              {/* 1. 설문조사 */}
+              <Link href="/surveys" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="glass-card animate-fade" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', transition: 'transform 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '2rem' }}>📊</span>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '0.2rem' }}>설문조사</h3>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: 0 }}>참여 대기</p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: '800', color: pendingSurveyCount > 0 ? 'var(--primary)' : 'var(--text-dim)', lineHeight: 1 }}>
+                      {pendingSurveyCount}
+                    </span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginLeft: '0.2rem' }}>건</span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* 2. 예약현황 */}
+              <Link href="/reservations" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="glass-card animate-fade" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', animationDelay: '0.1s', transition: 'transform 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '2rem' }}>📅</span>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '0.2rem' }}>예약현황</h3>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: 0 }}>
+                        내 승인 대기 <span style={{ color: myApprovalCount > 0 ? 'var(--accent)' : 'inherit', fontWeight: 'bold' }}>{myApprovalCount}건</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: 1 }}>
+                      {todayResvCount.total}
+                    </span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginLeft: '0.2rem' }}>건</span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* 3. 그룹 */}
+              <Link href="/groups" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="glass-card animate-fade" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', animationDelay: '0.2s', transition: 'transform 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '2rem' }}>👥</span>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '0.2rem' }}>내 그룹</h3>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: 0 }}>업데이트된 그룹 <span style={{ color: updatedGroupIds.length > 0 ? '#ff4444' : 'inherit', fontWeight: 'bold' }}>{updatedGroupIds.length}개</span></p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: 1 }}>
+                      {myGroupCount}
+                    </span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginLeft: '0.2rem' }}>개</span>
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            <section className={`glass-panel ${!noticesLoading ? 'animate-fade' : ''}`} style={{ padding: '2rem', marginBottom: '3rem', minHeight: '300px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.5rem' }}>📢 {formatDate(new Date())}</h2>
                 <button className="glass-card" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }} onClick={() => { const d = new Date(); const dateStr = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); router.push(`/notice/${dateStr}`); }}>더 보기</button>
               </div>
-              {todayNotices.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  {todayNotices.map((notice) => {
+
+              {noticesLoading ? (
+                <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-dim)' }}>
+                  <div className="loading-spinner" style={{ margin: '0 auto 1rem' }}></div>
+                  공지사항을 불러오는 중...
+                </div>
+              ) : todayNotices.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {todayNotices.map((notice, idx) => {
                     const isRead = readNoticeIds.includes(notice.id);
                     const isAll = notice.orgId === 'all';
                     const isOrg = notice.orgId === orgId;
@@ -589,100 +666,46 @@ export default function Home() {
                         className="glass-card"
                         onClick={() => markAsRead(notice.id)}
                         style={{
-                          padding: '1.5rem',
+                          padding: '1.2rem',
                           borderLeft: isAll ? '4px solid var(--accent)' : (isGroup ? '4px solid #7950f2' : '4px solid var(--primary)'),
-                          opacity: isRead ? 0.5 : 1,
-                          transition: '0.3s',
+                          opacity: isRead ? 0.6 : 1,
+                          transition: 'all 0.3s',
                           cursor: 'pointer',
-                          position: 'relative'
+                          position: 'relative',
+                          animation: `fadeIn 0.5s ease-out ${idx * 0.05}s backwards`,
+                          transform: isRead ? 'scale(0.99)' : 'scale(1)'
                         }}
                       >
-                        {isRead && <span style={{ position: 'absolute', top: '0.5rem', right: '1rem', fontSize: '0.7rem', color: 'var(--text-dim)' }}>읽음</span>}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-                          <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>{isAll ? '🌐 전체' : (isGroup ? '👥 그룹' : '🏢 조직')}</span>
-                          <p style={{ fontWeight: '600' }}>{notice.title}</p>
+                        {isRead && <span style={{ position: 'absolute', top: '0.8rem', right: '1rem', fontSize: '0.7rem', color: 'var(--text-dim)', border: '1px solid var(--border-glass)', padding: '2px 6px', borderRadius: '4px' }}>읽음</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            background: isAll ? 'rgba(255, 68, 68, 0.1)' : (isGroup ? 'rgba(121, 80, 242, 0.1)' : 'rgba(37, 99, 235, 0.1)'),
+                            color: isAll ? 'var(--accent)' : (isGroup ? '#7950f2' : 'var(--primary)'),
+                            fontWeight: 'bold'
+                          }}>
+                            {isAll ? '전체' : (isGroup ? '그룹' : '조직')}
+                          </span>
+                          <p style={{ fontWeight: '600', margin: 0, fontSize: '1.05rem' }}>{notice.title}</p>
                         </div>
-                        <div className="markdown-mini" style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{notice.content.length > 200 ? notice.content.slice(0, 200) + "..." : notice.content}</ReactMarkdown>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', paddingLeft: '0.2rem', lineHeight: '1.5' }}>
+                          <p style={{ margin: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                            {notice.content.replace(/[#*`]/g, '').slice(0, 100)}
+                          </p>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="glass-card" style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-dim)' }}>오늘 예정된 공지사항이 없습니다.</div>
+                <div className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem', opacity: 0.5 }}>📭</div>
+                  오늘 예정된 공지사항이 없습니다.
+                </div>
               )}
             </section>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-              {/* 1. 설문조사 */}
-              <Link href="/surveys" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="glass-card animate-fade" style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      📊 설문조사
-                    </h3>
-                    <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem' }}>구성원 의견 수렴 및 결과 확인</p>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '3rem', fontWeight: 'bold', color: pendingSurveyCount > 0 ? 'var(--primary)' : 'var(--text-dim)', lineHeight: '1' }}>
-                      {pendingSurveyCount}
-                      <span style={{ fontSize: '1rem', marginLeft: '0.5rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>건</span>
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>
-                      {pendingSurveyCount > 0 ? "참여해야 할 설문이 있습니다." : "모든 설문에 참여하셨습니다."}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-
-              {/* 2. 자원 예약 */}
-              <Link href="/reservations" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="glass-card animate-fade" style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      📅 예약현황
-                    </h3>
-                    <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem' }}>오늘의 자원 현황 및 승인 관리</p>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-main)' }}>오늘 이용중</span>
-                      <span style={{ fontWeight: 'bold' }}>{todayResvCount.reservedResources}곳<span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: 'var(--text-dim)', marginLeft: '0.4rem' }}>({todayResvCount.total}건)</span></span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-main)' }}>내 승인을 기다리는 예약</span>
-                      <span style={{ fontWeight: 'bold', color: myApprovalCount > 0 ? 'var(--accent)' : 'inherit' }}>{myApprovalCount}건</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-
-              {/* 3. 그룹 */}
-              <Link href="/groups" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="glass-card animate-fade" style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#7950f2', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      👥 그룹
-                    </h3>
-                    <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem' }}>소모임 및 프로젝트 그룹 활동</p>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-main)' }}>참여중인 그룹</span>
-                      <span style={{ fontWeight: 'bold' }}>
-                        <span style={{ color: 'var(--primary)' }}>{myGroupCount}개</span>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 'normal', marginLeft: '0.4rem' }}>(전체 {publicGroupCount})</span>
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-main)' }}>업데이트된 그룹</span>
-                      <span style={{ fontWeight: 'bold', color: updatedGroupIds.length > 0 ? '#ff4444' : 'inherit' }}>{updatedGroupIds.length}개</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </div>
           </>
         )}
         <style jsx>{`
