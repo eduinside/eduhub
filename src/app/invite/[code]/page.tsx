@@ -21,6 +21,7 @@ export default function InvitePage() {
     const [userDept, setUserDept] = useState("");
     const [userContact, setUserContact] = useState("");
     const [joining, setJoining] = useState(false);
+    const [authenticatedEmail, setAuthenticatedEmail] = useState<string | null>(null);
 
     // Email states
     const [email, setEmail] = useState("");
@@ -105,6 +106,7 @@ export default function InvitePage() {
     };
 
     const processPostAuth = async (user: any) => {
+        setAuthenticatedEmail(user.email);
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
 
@@ -151,7 +153,7 @@ export default function InvitePage() {
             const finalGlobalRole = globalRole || "user";
 
             await setDoc(userRef, {
-                email: email,
+                email: email || authenticatedEmail || auth.currentUser?.email,
                 orgIds: arrayUnion(orgData.id),
                 profiles: newProfiles,
                 // 메인 정보는 기존 정보가 없을 때만 현재 입력값으로 저장
@@ -213,7 +215,7 @@ export default function InvitePage() {
                 ) : (
                     <div>
                         <h2 style={{ marginBottom: '0.5rem', textAlign: 'center' }}>📋 프로필 정보 확인</h2>
-                        <form onSubmit={(e) => { e.preventDefault(); finalizeJoin(auth.currentUser!.uid, auth.currentUser!.email, "user"); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                        <form onSubmit={(e) => { e.preventDefault(); finalizeJoin(auth.currentUser!.uid, authenticatedEmail || auth.currentUser?.email || null, "user"); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                             <div className="input-group-v">
                                 <label>실명</label><input type="text" value={userName} onChange={e => setUserName(e.target.value)} className="glass-card" required />
                             </div>

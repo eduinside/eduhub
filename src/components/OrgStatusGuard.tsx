@@ -56,6 +56,8 @@ export default function OrgStatusGuard({ children }: { children: React.ReactNode
                 // 가입 처리
                 const userRef = doc(db, "users", user.uid);
                 await setDoc(userRef, {
+                    email: user.email,
+                    name: user.displayName || "익명",
                     orgIds: arrayUnion(targetOrgId),
                     profiles: {
                         [targetOrgId]: {
