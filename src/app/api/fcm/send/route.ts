@@ -20,7 +20,15 @@ export async function POST(request: Request) {
             return acc;
         }, {} as Record<string, string>);
 
-        const webpush = { fcmOptions: { link: url || '/' } };
+        const webpush = {
+            fcmOptions: {
+                link: url || '/',
+            },
+            notification: {
+                icon: '/icon-192x192.png',
+                badge: '/icon-192x192.png'
+            }
+        };
 
         // 1. Single Token
         if (token) {
