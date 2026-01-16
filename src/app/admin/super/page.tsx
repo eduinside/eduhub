@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { db, storage } from "@/lib/firebase";
@@ -38,6 +38,7 @@ interface UserProfile {
     profiles?: Record<string, any>;
     provider?: string;
     superAdminGrantedAt?: any;
+    fcmTokens?: string[];
 }
 
 interface Notice {
@@ -56,10 +57,16 @@ interface Notice {
 export default function SuperAdminPage() {
     const { isSuperAdmin, user } = useAuth();
     const { showToast } = useToast();
-    const [activeTab, setActiveTab] = useState<'stats' | 'orgs' | 'policy' | 'admins'>('stats');
+    const [activeTab, setActiveTab] = useState<'stats' | 'orgs' | 'policy' | 'admins' | 'notifications'>('stats');
 
     const [searchEmail, setSearchEmail] = useState("");
     const [foundUsers, setFoundUsers] = useState<UserProfile[]>([]);
+
+    // Notification State
+    const [notiTitle, setNotiTitle] = useState("");
+    const [notiBody, setNotiBody] = useState("");
+    const [notiTarget, setNotiTarget] = useState("all_users");
+    const [sendingNoti, setSendingNoti] = useState(false);
 
     const [orgs, setOrgs] = useState<Organization[]>([]);
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -74,6 +81,8 @@ export default function SuperAdminPage() {
     const [editOrgName, setEditOrgName] = useState("");
     const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null);
     const [limitModalOrg, setLimitModalOrg] = useState<Organization | null>(null);
+
+
 
     const copyToClipboard = (text: string, successMsg: string) => {
         if (navigator.clipboard && window.isSecureContext) {
@@ -182,6 +191,39 @@ export default function SuperAdminPage() {
         const field = type === 'user' ? 'userInviteCode' : 'adminInviteCode';
         await updateDoc(doc(db, "organizations", orgId), { [field]: newCode });
         showToast("코드 갱신 완료", "success");
+    };
+
+    const handleSendTestNotification = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!notiTitle.trim() || !notiBody.trim()) return;
+        setSendingNoti(true);
+        try {
+            const payload: any = { title: notiTitle, body: notiBody };
+            if (notiTarget === 'me') {
+                if (!user?.uid) { showToast("로그인 정보가 없습니다.", "error"); setSendingNoti(false); return; }
+                payload.targetUserId = user.uid;
+            }
+            else if (notiTarget === 'all_users') payload.topic = 'all_users';
+            else if (notiTarget.startsWith('org_')) payload.topic = notiTarget;
+            else payload.token = notiTarget;
+
+            const res = await fetch('/api/fcm/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                showToast("알림이 전송되었습니다.", "success");
+                setNotiTitle("");
+                setNotiBody("");
+            } else {
+                showToast("전송 실패", "error");
+            }
+        } catch (error) {
+            showToast("전송 중 오류가 발생했습니다.", "error");
+        } finally {
+            setSendingNoti(false);
+        }
     };
 
     const deleteOrg = async (id: string) => {
@@ -325,7 +367,8 @@ export default function SuperAdminPage() {
                 {[
                     { id: 'stats', label: '📊 대시보드' },
                     { id: 'orgs', label: '🏢 조직 관리' },
-                    { id: 'admins', label: '🛡️ 최고관리자' }
+                    { id: 'admins', label: '🛡️ 최고관리자' },
+                    { id: 'notifications', label: '🔔 알림 관리' }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -589,217 +632,304 @@ export default function SuperAdminPage() {
                 </div>
             )}
 
-            {isCreateModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsCreateModalOpen(false)}>
-                    <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '500px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
-                        <h2 style={{ marginBottom: '2rem' }}>🏢 신규 조직 생성</h2>
-                        <form onSubmit={createOrg} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <label style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>조직명</label>
-                                <input type="text" value={newOrgName} onChange={e => setNewOrgName(e.target.value)} className="glass-card" style={{ width: '100%', padding: '1rem', border: 'none', marginTop: '0.5rem' }} placeholder="조직명을 입력하세요" required />
-                            </div>
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="glass-card" style={{ flex: 1, padding: '1rem' }}>취소</button>
-                                <button type="submit" className="btn-primary" style={{ flex: 1, padding: '1rem' }}>생성하기</button>
-                            </div>
-                        </form>
+            {activeTab === 'notifications' && (
+                <div className="animate-fade" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                    <div style={{ marginBottom: '2.5rem' }}>
+                        <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔔 알림 시스템 관리</h2>
+                        <p style={{ color: 'var(--text-dim)' }}>푸시 알림 사용자 현황을 파악하고 테스트 메시지를 발송합니다.</p>
                     </div>
-                </div>
-            )}
 
-            {historyOrg && (
-                <div className="modal-overlay" onClick={() => setHistoryOrg(null)}>
-                    <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '500px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
-                        <h3 style={{ marginBottom: '2rem' }}>💎 조직 상세 및 수정</h3>
-                        <form onSubmit={async (e) => { e.preventDefault(); await updateDoc(doc(db, "organizations", historyOrg.id), { name: editOrgName }); showToast("변경됨", "success"); setHistoryOrg(null); }} style={{ marginBottom: '2rem' }}>
-                            <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>조직명 변경</label>
-                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                <input type="text" value={editOrgName} onChange={e => setEditOrgName(e.target.value)} className="glass-card" style={{ flex: 1, padding: '0.8rem', border: 'none' }} required />
-                                <button type="submit" className="btn-primary">변경</button>
-                            </div>
-                        </form>
-                        <div style={{ background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: '12px', fontSize: '0.9rem', maxHeight: '250px', overflowY: 'auto' }}>
-                            <p style={{ marginBottom: '1rem' }}>✨ <strong>최초 생성:</strong> {historyOrg.createdAt?.toDate?.().toLocaleString() || '기록 없음'}</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                <p style={{ fontWeight: 'bold' }}>🕒 상태 변경 이력</p>
-                                {historyOrg.statusHistory?.map((h: any, idx: number) => (
-                                    <div key={idx} style={{ paddingLeft: '0.8rem', borderLeft: `3px solid ${h.status === 'active' ? 'var(--primary)' : 'var(--accent)'}` }}>
-                                        {h.status === 'active' ? '운영 재개' : '운영 중단'} - {h.changedAt || h.timestamp?.toDate?.().toLocaleString()}
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '3rem', borderLeft: '4px solid var(--accent)' }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>📱 푸시 알림 사용자 현황</h3>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem' }}>
+                            <p style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: 1 }}>
+                                {users.filter(u => u.fcmTokens && u.fcmTokens.length > 0).length}
+                            </p>
+                            <p style={{ fontSize: '1.1rem', color: 'var(--text-dim)', marginBottom: '0.8rem' }}>
+                                / 전체 {users.length}명
+                            </p>
                         </div>
-                        <button onClick={() => setHistoryOrg(null)} className="glass-card" style={{ width: '100%', padding: '1rem', marginTop: '2rem', border: 'none' }}>닫기</button>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginTop: '1rem' }}>
+                            현재 브라우저에서 알림 권한을 허용하고 토큰이 유효한 사용자 수입니다.
+                        </p>
                     </div>
-                </div>
-            )}
 
-            {limitModalOrg && (
-                <div className="modal-overlay" onClick={() => setLimitModalOrg(null)}>
-                    <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '500px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.3rem' }}>💾 용량 및 파일 관리 ({limitModalOrg.name})</h3>
-
-                        <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
-                            <p style={{ marginBottom: '0.8rem', color: 'var(--text-dim)' }}>현재 스토리지 사용 현황</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                        {((limitModalOrg.storageUsage?.totalBytes || 0) / (1024 * 1024)).toFixed(2)} MB
-                                    </div>
-                                    <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>총 용량</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                        {(limitModalOrg.storageUsage?.totalFiles || 0).toLocaleString()}개
-                                    </div>
-                                    <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>총 파일 수</div>
-                                </div>
+                    <div className="glass-panel" style={{ padding: '2.5rem' }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem' }}>📨 테스트 알림 발송</h3>
+                        <form onSubmit={handleSendTestNotification} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div>
+                                <label style={{ fontSize: '0.9rem', color: 'var(--text-dim)', display: 'block', marginBottom: '0.5rem' }}>수신 대상</label>
+                                <select
+                                    className="glass-card"
+                                    value={notiTarget}
+                                    onChange={(e) => setNotiTarget(e.target.value)}
+                                    style={{ width: '100%', padding: '1rem', border: 'none', background: 'var(--bg-card)' }}
+                                >
+                                    <option value="all_users">📢 전체 사용자 (all_users)</option>
+                                    <option value="me">👤 나에게만 발송 (테스트)</option>
+                                    {orgs.filter(o => o.status !== 'suspended').map(o => (
+                                        <React.Fragment key={o.id}>
+                                            <option value={`org_${o.id}_admin`}>🛡️ {o.name} 관리자 (org_{o.id}_admin)</option>
+                                            <option value={`org_${o.id}_member`}>👥 {o.name} 전체 구성원 (org_{o.id}_member)</option>
+                                        </React.Fragment>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.9rem', color: 'var(--text-dim)', display: 'block', marginBottom: '0.5rem' }}>제목</label>
+                                <input
+                                    type="text"
+                                    value={notiTitle}
+                                    onChange={(e) => setNotiTitle(e.target.value)}
+                                    className="glass-card"
+                                    style={{ width: '100%', padding: '1rem', border: 'none' }}
+                                    placeholder="알림 제목을 입력하세요"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.9rem', color: 'var(--text-dim)', display: 'block', marginBottom: '0.5rem' }}>내용</label>
+                                <textarea
+                                    value={notiBody}
+                                    onChange={(e) => setNotiBody(e.target.value)}
+                                    className="glass-card"
+                                    style={{ width: '100%', padding: '1rem', minHeight: '120px', border: 'none', resize: 'vertical' }}
+                                    placeholder="알림 내용을 입력하세요"
+                                    required
+                                />
                             </div>
                             <button
-                                onClick={async () => {
-                                    // Simple simulation of calculation or fetch real stats if possible. 
-                                    // Since actual storage scanning is expensive, we might just update with a timestamp or simulate recalc.
-                                    // For now, let's assume valid data exists or just refresh.
-                                    showToast("스토리지 사용량을 갱신 중입니다...", "info");
-                                    // Here we could trigger a Cloud Function or complex query. 
-                                    // Simulating an update for UI feedback:
-                                    try {
-                                        // In a real app, this would be a heavy backend job.
-                                        // We will just verify the current data is displayed.
-                                        showToast("최신 데이터입니다.", "success");
-                                    } catch (e) { }
-                                }}
-                                className="glass-card"
-                                style={{ width: '100%', marginTop: '1rem', padding: '0.8rem', fontSize: '0.9rem' }}
+                                type="submit"
+                                className="btn-primary"
+                                style={{ padding: '1rem', marginTop: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+                                disabled={sendingNoti}
                             >
-                                🔄 사용량 집계 갱신 (시뮬레이션)
+                                {sendingNoti ? '발송 중...' : '🚀 알림 발송하기'}
                             </button>
-                        </div>
-
-                        <div style={{ marginBottom: '2rem' }}>
-                            <p style={{ marginBottom: '0.8rem', color: 'var(--text-dim)' }}>업로드 제한 설정</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.8rem' }}>
-                                {['3', '5', '10', 'blocked'].map(limit => (
-                                    <button
-                                        key={limit}
-                                        onClick={async () => {
-                                            try {
-                                                const newHistory = [
-                                                    ...(limitModalOrg.limitHistory || []),
-                                                    { limit, changedAt: new Date().toISOString(), changedBy: user?.email || 'unknown' }
-                                                ];
-                                                await updateDoc(doc(db, "organizations", limitModalOrg.id), {
-                                                    uploadLimit: limit,
-                                                    limitHistory: newHistory
-                                                });
-                                                setLimitModalOrg(prev => prev ? { ...prev, uploadLimit: limit, limitHistory: newHistory } : null);
-                                                showToast("설정이 변경되었습니다.", "success");
-                                            } catch (e) { showToast("변경 실패", "error"); }
-                                        }}
-                                        className={limitModalOrg.uploadLimit === limit || (limit === '3' && !limitModalOrg.uploadLimit) ? 'btn-primary' : 'glass-card'}
-                                        style={{ padding: '0.8rem', fontSize: '0.9rem' }}
-                                    >
-                                        {limit === 'blocked' ? '차단' : `${limit}MB`}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {limitModalOrg.limitHistory && limitModalOrg.limitHistory.length > 0 && (
-                            <div style={{ marginTop: '1rem', maxHeight: '150px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
-                                <p style={{ fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>📜 변경 이력</p>
-                                {limitModalOrg.limitHistory.slice().reverse().map((h, i) => (
-                                    <div key={i} style={{ fontSize: '0.75rem', marginBottom: '0.3rem', color: 'var(--text-dim)' }}>
-                                        {new Date(h.changedAt).toLocaleString()} - <b>{h.limit === 'blocked' ? '차단' : `${h.limit}MB`}</b>로 변경 ({h.changedBy})
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <button onClick={() => setLimitModalOrg(null)} className="glass-card" style={{ width: '100%', padding: '1rem', marginTop: '2rem', border: 'none' }}>닫기</button>
-                    </div>
-                </div>
-            )}
-
-            {selectedOrgId && (
-                <div className="modal-overlay" onClick={() => setSelectedOrgId(null)}>
-                    <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '800px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
-                        <h3>구성원 권한 관리</h3>
-                        <div style={{ maxHeight: '500px', overflowY: 'auto', marginTop: '1rem' }}>
-                            <table style={{ width: '100%' }}><tbody>
-                                {users.filter(u => u.orgIds?.includes(selectedOrgId)).map(u => {
-                                    const p = u.profiles?.[selectedOrgId];
-                                    const orgRole = p?.role || 'user';
-                                    return (
-                                        <tr key={u.uid} style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                                            <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                                <span style={{
-                                                    padding: '0.3rem 0.6rem',
-                                                    borderRadius: '99px',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 'bold',
-                                                    background: u.provider === 'password' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(66, 133, 244, 0.15)',
-                                                    color: u.provider === 'password' ? 'var(--text-dim)' : '#4c8bf5',
-                                                    border: `1px solid ${u.provider === 'password' ? 'rgba(255,255,255,0.2)' : 'rgba(76,139,245,0.3)'}`,
-                                                    whiteSpace: 'nowrap'
-                                                }}>
-                                                    {u.provider === 'password' ? '이메일' : 'Google'}
-                                                </span>
-                                                <div>
-                                                    {p?.name || u.name} ({p?.department || '미지정'}) <br />
-                                                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{u.email}</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '1rem' }}>{orgRole === 'admin' ? '관리자' : '구성원'}</td>
-                                            <td style={{ padding: '1rem' }}>
-                                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                    <button onClick={async () => {
-                                                        const newRole = orgRole === 'admin' ? 'user' : 'admin';
-                                                        const updated = { ...(u.profiles || {}) };
-                                                        if (!updated[selectedOrgId]) updated[selectedOrgId] = {};
-                                                        updated[selectedOrgId].role = newRole;
-                                                        await updateDoc(doc(db, "users", u.uid), { profiles: updated });
-                                                        showToast("권한 변경됨", "success");
-                                                    }} className="glass-card" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>권한변경</button>
-
-                                                    <button onClick={async () => {
-                                                        if (!confirm(`정말로 이 사용자를 이 조직에서 제외하시겠습니까?`)) return;
-                                                        try {
-                                                            const userRef = doc(db, "users", u.uid);
-                                                            const updated = { ...(u.profiles || {}) };
-                                                            delete updated[selectedOrgId];
-
-                                                            await updateDoc(userRef, {
-                                                                orgIds: arrayRemove(selectedOrgId),
-                                                                profiles: updated
-                                                            });
-                                                            showToast("조직에서 제외되었습니다.", "info");
-                                                        } catch (err) {
-                                                            showToast("제외 실패", "error");
-                                                        }
-                                                    }} className="glass-card" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', color: '#ff4444' }}>제외</button>
-
-                                                    {u.provider === 'password' && (
-                                                        <button onClick={async () => {
-                                                            if (!confirm(`${u.email}로 비밀번호 재설정 메일을 보낼까요?`)) return;
-                                                            try {
-                                                                await sendPasswordResetEmail(auth, u.email);
-                                                                showToast("재설정 메일 발송 완료", "success");
-                                                            } catch (err) {
-                                                                showToast("발송 실패", "error");
-                                                            }
-                                                        }} className="glass-card" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', color: 'var(--accent)' }}>비번초기화</button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody></table>
-                        </div>
+                        </form>
                     </div>
                 </div>
             )
+            }
+
+            {
+                isCreateModalOpen && (
+                    <div className="modal-overlay" onClick={() => setIsCreateModalOpen(false)}>
+                        <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '500px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
+                            <h2 style={{ marginBottom: '2rem' }}>🏢 신규 조직 생성</h2>
+                            <form onSubmit={createOrg} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>조직명</label>
+                                    <input type="text" value={newOrgName} onChange={e => setNewOrgName(e.target.value)} className="glass-card" style={{ width: '100%', padding: '1rem', border: 'none', marginTop: '0.5rem' }} placeholder="조직명을 입력하세요" required />
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                    <button type="button" onClick={() => setIsCreateModalOpen(false)} className="glass-card" style={{ flex: 1, padding: '1rem' }}>취소</button>
+                                    <button type="submit" className="btn-primary" style={{ flex: 1, padding: '1rem' }}>생성하기</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                historyOrg && (
+                    <div className="modal-overlay" onClick={() => setHistoryOrg(null)}>
+                        <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '500px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
+                            <h3 style={{ marginBottom: '2rem' }}>💎 조직 상세 및 수정</h3>
+                            <form onSubmit={async (e) => { e.preventDefault(); await updateDoc(doc(db, "organizations", historyOrg.id), { name: editOrgName }); showToast("변경됨", "success"); setHistoryOrg(null); }} style={{ marginBottom: '2rem' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>조직명 변경</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <input type="text" value={editOrgName} onChange={e => setEditOrgName(e.target.value)} className="glass-card" style={{ flex: 1, padding: '0.8rem', border: 'none' }} required />
+                                    <button type="submit" className="btn-primary">변경</button>
+                                </div>
+                            </form>
+                            <div style={{ background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: '12px', fontSize: '0.9rem', maxHeight: '250px', overflowY: 'auto' }}>
+                                <p style={{ marginBottom: '1rem' }}>✨ <strong>최초 생성:</strong> {historyOrg.createdAt?.toDate?.().toLocaleString() || '기록 없음'}</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                    <p style={{ fontWeight: 'bold' }}>🕒 상태 변경 이력</p>
+                                    {historyOrg.statusHistory?.map((h: any, idx: number) => (
+                                        <div key={idx} style={{ paddingLeft: '0.8rem', borderLeft: `3px solid ${h.status === 'active' ? 'var(--primary)' : 'var(--accent)'}` }}>
+                                            {h.status === 'active' ? '운영 재개' : '운영 중단'} - {h.changedAt || h.timestamp?.toDate?.().toLocaleString()}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={() => setHistoryOrg(null)} className="glass-card" style={{ width: '100%', padding: '1rem', marginTop: '2rem', border: 'none' }}>닫기</button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                limitModalOrg && (
+                    <div className="modal-overlay" onClick={() => setLimitModalOrg(null)}>
+                        <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '500px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
+                            <h3 style={{ marginBottom: '1.5rem', fontSize: '1.3rem' }}>💾 용량 및 파일 관리 ({limitModalOrg.name})</h3>
+
+                            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                                <p style={{ marginBottom: '0.8rem', color: 'var(--text-dim)' }}>현재 스토리지 사용 현황</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                                            {((limitModalOrg.storageUsage?.totalBytes || 0) / (1024 * 1024)).toFixed(2)} MB
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>총 용량</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                                            {(limitModalOrg.storageUsage?.totalFiles || 0).toLocaleString()}개
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>총 파일 수</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        // Simple simulation of calculation or fetch real stats if possible. 
+                                        // Since actual storage scanning is expensive, we might just update with a timestamp or simulate recalc.
+                                        // For now, let's assume valid data exists or just refresh.
+                                        showToast("스토리지 사용량을 갱신 중입니다...", "info");
+                                        // Here we could trigger a Cloud Function or complex query. 
+                                        // Simulating an update for UI feedback:
+                                        try {
+                                            // In a real app, this would be a heavy backend job.
+                                            // We will just verify the current data is displayed.
+                                            showToast("최신 데이터입니다.", "success");
+                                        } catch (e) { }
+                                    }}
+                                    className="glass-card"
+                                    style={{ width: '100%', marginTop: '1rem', padding: '0.8rem', fontSize: '0.9rem' }}
+                                >
+                                    🔄 사용량 집계 갱신 (시뮬레이션)
+                                </button>
+                            </div>
+
+                            <div style={{ marginBottom: '2rem' }}>
+                                <p style={{ marginBottom: '0.8rem', color: 'var(--text-dim)' }}>업로드 제한 설정</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.8rem' }}>
+                                    {['3', '5', '10', 'blocked'].map(limit => (
+                                        <button
+                                            key={limit}
+                                            onClick={async () => {
+                                                try {
+                                                    const newHistory = [
+                                                        ...(limitModalOrg.limitHistory || []),
+                                                        { limit, changedAt: new Date().toISOString(), changedBy: user?.email || 'unknown' }
+                                                    ];
+                                                    await updateDoc(doc(db, "organizations", limitModalOrg.id), {
+                                                        uploadLimit: limit,
+                                                        limitHistory: newHistory
+                                                    });
+                                                    setLimitModalOrg(prev => prev ? { ...prev, uploadLimit: limit, limitHistory: newHistory } : null);
+                                                    showToast("설정이 변경되었습니다.", "success");
+                                                } catch (e) { showToast("변경 실패", "error"); }
+                                            }}
+                                            className={limitModalOrg.uploadLimit === limit || (limit === '3' && !limitModalOrg.uploadLimit) ? 'btn-primary' : 'glass-card'}
+                                            style={{ padding: '0.8rem', fontSize: '0.9rem' }}
+                                        >
+                                            {limit === 'blocked' ? '차단' : `${limit}MB`}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {limitModalOrg.limitHistory && limitModalOrg.limitHistory.length > 0 && (
+                                <div style={{ marginTop: '1rem', maxHeight: '150px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
+                                    <p style={{ fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>📜 변경 이력</p>
+                                    {limitModalOrg.limitHistory.slice().reverse().map((h, i) => (
+                                        <div key={i} style={{ fontSize: '0.75rem', marginBottom: '0.3rem', color: 'var(--text-dim)' }}>
+                                            {new Date(h.changedAt).toLocaleString()} - <b>{h.limit === 'blocked' ? '차단' : `${h.limit}MB`}</b>로 변경 ({h.changedBy})
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <button onClick={() => setLimitModalOrg(null)} className="glass-card" style={{ width: '100%', padding: '1rem', marginTop: '2rem', border: 'none' }}>닫기</button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                selectedOrgId && (
+                    <div className="modal-overlay" onClick={() => setSelectedOrgId(null)}>
+                        <div className="glass-panel animate-fade" style={{ width: '90%', maxWidth: '800px', padding: '2.5rem' }} onClick={e => e.stopPropagation()}>
+                            <h3>구성원 권한 관리</h3>
+                            <div style={{ maxHeight: '500px', overflowY: 'auto', marginTop: '1rem' }}>
+                                <table style={{ width: '100%' }}><tbody>
+                                    {users.filter(u => u.orgIds?.includes(selectedOrgId)).map(u => {
+                                        const p = u.profiles?.[selectedOrgId];
+                                        const orgRole = p?.role || 'user';
+                                        return (
+                                            <tr key={u.uid} style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                                                <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                                    <span style={{
+                                                        padding: '0.3rem 0.6rem',
+                                                        borderRadius: '99px',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        background: u.provider === 'password' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(66, 133, 244, 0.15)',
+                                                        color: u.provider === 'password' ? 'var(--text-dim)' : '#4c8bf5',
+                                                        border: `1px solid ${u.provider === 'password' ? 'rgba(255,255,255,0.2)' : 'rgba(76,139,245,0.3)'}`,
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {u.provider === 'password' ? '이메일' : 'Google'}
+                                                    </span>
+                                                    <div>
+                                                        {p?.name || u.name} ({p?.department || '미지정'}) <br />
+                                                        <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{u.email}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '1rem' }}>{orgRole === 'admin' ? '관리자' : '구성원'}</td>
+                                                <td style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                        <button onClick={async () => {
+                                                            const newRole = orgRole === 'admin' ? 'user' : 'admin';
+                                                            const updated = { ...(u.profiles || {}) };
+                                                            if (!updated[selectedOrgId]) updated[selectedOrgId] = {};
+                                                            updated[selectedOrgId].role = newRole;
+                                                            await updateDoc(doc(db, "users", u.uid), { profiles: updated });
+                                                            showToast("권한 변경됨", "success");
+                                                        }} className="glass-card" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>권한변경</button>
+
+                                                        <button onClick={async () => {
+                                                            if (!confirm(`정말로 이 사용자를 이 조직에서 제외하시겠습니까?`)) return;
+                                                            try {
+                                                                const userRef = doc(db, "users", u.uid);
+                                                                const updated = { ...(u.profiles || {}) };
+                                                                delete updated[selectedOrgId];
+
+                                                                await updateDoc(userRef, {
+                                                                    orgIds: arrayRemove(selectedOrgId),
+                                                                    profiles: updated
+                                                                });
+                                                                showToast("조직에서 제외되었습니다.", "info");
+                                                            } catch (err) {
+                                                                showToast("제외 실패", "error");
+                                                            }
+                                                        }} className="glass-card" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', color: '#ff4444' }}>제외</button>
+
+                                                        {u.provider === 'password' && (
+                                                            <button onClick={async () => {
+                                                                if (!confirm(`${u.email}로 비밀번호 재설정 메일을 보낼까요?`)) return;
+                                                                try {
+                                                                    await sendPasswordResetEmail(auth, u.email);
+                                                                    showToast("재설정 메일 발송 완료", "success");
+                                                                } catch (err) {
+                                                                    showToast("발송 실패", "error");
+                                                                }
+                                                            }} className="glass-card" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', color: 'var(--accent)' }}>비번초기화</button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody></table>
+                            </div>
+                        </div>
+                    </div>
+                )
             }
         </main >
     );

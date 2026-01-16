@@ -9,6 +9,7 @@ import { collection, query, where, getDocs, doc, getDoc } from "firebase/firesto
 import { db, auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useGroupStatus } from "@/hooks/useGroupStatus";
+import useFcmToken from "@/hooks/useFcmToken";
 
 export default function NavMenu() {
     const { user, orgId, orgIds, orgStatus, setActiveOrgId, profiles, theme, toggleTheme, activeProfile, isAdmin, isSuperAdmin } = useAuth();
@@ -22,6 +23,9 @@ export default function NavMenu() {
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    useFcmToken();
+
     const [orgBookmarks, setOrgBookmarks] = useState<{ title: string, url: string }[]>([]);
     const [personalBookmarks, setPersonalBookmarks] = useState<{ title: string, url: string }[]>([]);
     const [userGroups, setUserGroups] = useState<{ id: string, name: string }[]>([]);

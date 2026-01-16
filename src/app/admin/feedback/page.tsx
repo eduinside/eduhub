@@ -200,6 +200,21 @@ export default function FeedbackPage() {
                     repliedBy: replierName,
                     repliedAt: new Date()
                 });
+
+                // Send Notification
+                try {
+                    await fetch('/api/fcm/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            targetUserId: selectedFeedback.userId,
+                            title: `[${orgName || 'EduHub'}] 문의에 대한 답변이 추가되었습니다.`,
+                            body: `답변: ${replyText.slice(0, 30)}...`,
+                            url: '/'
+                        })
+                    });
+                } catch (e) { console.error("Notification Error:", e); }
+
                 showToast("답변이 등록되었습니다.", "success");
             }
 

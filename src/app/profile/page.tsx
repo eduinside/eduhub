@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc, arrayUnion, arrayRemove, updateDoc } from "firebas
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { deleteUser, sendPasswordResetEmail } from "firebase/auth";
+import NotificationSettings from "@/components/NotificationSettings";
 
 export default function ProfilePage() {
     const { user, orgId, orgIds, activeProfile, profiles, loading, setActiveOrgId } = useAuth();
@@ -218,17 +219,22 @@ export default function ProfilePage() {
 
     if (loading) return null;
 
+    // 현재 조직 이름 찾기
+    const currentOrgName = myOrgDetails.find(o => o.id === orgId)?.name || "현재 조직";
+
     return (
         <main style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
             <h1 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '2.5rem' }}>👤 내 정보 관리</h1>
 
             <div style={{ display: 'grid', gap: '2rem' }}>
+
+                {/* 1. 현재 소속 정보 수정 */}
                 <section className="glass-panel" style={{ padding: '2.5rem' }}>
                     <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                         🏢 현재 소속 정보 수정
                     </h2>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1.5rem' }}>
-                        현재 선택된 조직에서 사용하는 내 정보를 관리합니다. 각 소속마다 다른 정보를 설정할 수 있습니다.
+                        현재 선택된 조직(<strong>{currentOrgName}</strong>)에서 사용하는 내 정보를 관리합니다.
                     </p>
                     <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -247,10 +253,27 @@ export default function ProfilePage() {
                             {isSaving ? "저장 중..." : "소속 정보 업데이트"}
                         </button>
                     </form>
+
+                    {/* 조직 제외 버튼 */}
+                    {orgIds.length > 1 && (
+                        <div style={{ borderTop: '1px solid var(--border-glass)', marginTop: '2rem', paddingTop: '1.5rem' }}>
+                            <button
+                                onClick={() => orgId && handleLeaveOrg(orgId, currentOrgName)}
+                                className="glass-card btn-delete-fancy"
+                                style={{ width: '100%', padding: '1rem', color: '#ff4444', border: '1px solid rgba(255, 68, 68, 0.2)', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+                            >
+                                <span>📤</span> {currentOrgName} 조직에서 나가기
+                            </button>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '0.8rem', textAlign: 'center' }}>
+                                이 조직에서의 활동 기록이 더 이상 프로필에 표시되지 않습니다.
+                            </p>
+                        </div>
+                    )}
                 </section>
 
+                {/* 2. 다른 조직 합류하기 */}
                 <section className="glass-panel" style={{ padding: '2.5rem' }}>
-                    <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>🚀 새로운 곳에 합류하기</h2>
+                    <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>🚀 다른 조직 합류하기</h2>
                     {!pendingOrg ? (
                         <>
                             <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1.5rem' }}>
@@ -298,26 +321,10 @@ export default function ProfilePage() {
                     )}
                 </section>
 
-                {orgIds.length > 1 && (
-                    <section className="glass-panel" style={{ padding: '2.5rem' }}>
-                        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>🏢 소속 관리 및 제외</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {myOrgDetails.map(org => (
-                                <div key={org.id} className="glass-card" style={{ padding: '1.2rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ fontWeight: '600' }}>{org.name} {org.id === orgId && <span style={{ fontSize: '0.7rem', color: 'var(--primary)', marginLeft: '0.5rem' }}>(현재 접속 중)</span>}</div>
-                                    <button
-                                        onClick={() => handleLeaveOrg(org.id, org.name)}
-                                        className="btn-delete-fancy"
-                                        style={{ padding: '0.5rem 1rem', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444', border: '1px solid rgba(255, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                    >
-                                        조직 제외
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                )}
+                {/* 3. 알림 설정 */}
+                <NotificationSettings />
 
+                {/* 4. 로그인 계정 및 서비스 탈퇴하기 */}
                 <section className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
                     <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>로그인 계정: {user?.email}</p>
                     <p style={{ color: 'var(--text-main)', fontSize: '0.85rem', marginBottom: '1.2rem', opacity: 0.8 }}>
@@ -351,7 +358,7 @@ export default function ProfilePage() {
             </div>
             <style jsx>{`
                 .btn-delete-fancy:hover {
-                    background: rgba(255, 68, 68, 0.2) !important;
+                    background: rgba(255, 68, 68, 0.1) !important;
                 }
             `}</style>
         </main>

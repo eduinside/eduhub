@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, orderBy, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, orderBy, updateDoc, doc, deleteDoc, getDoc } from "firebase/firestore";
 import { usePathname } from "next/navigation";
 import { getFullCopyright } from "@/config/app";
 
@@ -47,9 +47,18 @@ export default function Footer() {
     const [isHovered, setIsHovered] = useState(false);
     const [myFeedbacks, setMyFeedbacks] = useState<Feedback[]>([]);
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    const [orgName, setOrgName] = useState("");
 
     // 관리자 페이지에서는 푸터 숨김
     const isAdminPage = pathname.startsWith("/admin");
+
+    useEffect(() => {
+        if (orgId && !isAdminPage) {
+            getDoc(doc(db, "organizations", orgId)).then(snap => {
+                if (snap.exists()) setOrgName(snap.data().name);
+            });
+        }
+    }, [orgId, isAdminPage]);
 
     // 읽지 않은 답변 확인 및 내 문의 목록 가져오기
     useEffect(() => {
@@ -129,6 +138,20 @@ export default function Footer() {
                 createdAt: serverTimestamp(),
                 status: "pending"
             });
+
+            // Send Notification to Org Admins
+            try {
+                await fetch('/api/fcm/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic: `org_${orgId}_admin`,
+                        title: `[${orgName || '문의'}] 문의가 추가되었습니다.`,
+                        body: `작성자: ${userName}\n내용: ${feedbackText.length > 30 ? feedbackText.slice(0, 30) + '...' : feedbackText}`,
+                        url: '/admin/feedback'
+                    })
+                });
+            } catch (ignore) { console.error(ignore); }
 
             showToast("문의가 전송되었습니다.", "success");
             setFeedbackText("");
