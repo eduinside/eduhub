@@ -11,4 +11,5 @@ const nextConfig: NextConfig = {
   /* config options here */
 };
 
-export default withPWA(nextConfig);
+// export default withPWA(nextConfig);
+export default nextConfig;

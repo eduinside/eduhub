@@ -308,10 +308,11 @@ export default function SurveysPage() {
                 {!isCreating && (
                     <button
                         onClick={() => setIsCreating(true)}
-                        className="btn-primary"
+                        className="btn-primary create-survey-btn"
                         style={{ padding: '0.8rem 1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
-                        + 설문 만들기
+                        <span className="plus-mark" style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span>
+                        <span className="btn-text">설문 만들기</span>
                     </button>
                 )}
             </header>
@@ -585,6 +586,24 @@ export default function SurveysPage() {
                     </div>
                 )}
             </div>
+            <style jsx>{`
+                @media (max-width: 768px) {
+                    :global(.create-survey-btn) {
+                        padding: 0 !important;
+                        width: 3rem;
+                        height: 3rem;
+                        justify-content: center;
+                        border-radius: 50% !important;
+                    }
+                    .btn-text {
+                        display: none;
+                    }
+                    .plus-mark {
+                        font-size: 1.5rem !important;
+                        margin: 0 !important;
+                    }
+                }
+            `}</style>
         </main>
     );
 }

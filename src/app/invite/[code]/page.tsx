@@ -28,6 +28,7 @@ export default function InvitePage() {
     const [password, setPassword] = useState("");
     const [isEmailSignMode, setIsEmailSignMode] = useState(false);
     const [pending, setPending] = useState(false);
+    const [authMethod, setAuthMethod] = useState<'email' | 'google'>('email');
 
     useEffect(() => {
         async function checkInviteCode() {
@@ -184,33 +185,73 @@ export default function InvitePage() {
                 {step === 1 ? (
                     <div style={{ textAlign: 'center' }}>
                         <h1 className="text-gradient" style={{ fontSize: '2.2rem', marginBottom: '1.5rem' }}>초대 확인</h1>
-                        <div style={{ fontSize: '1.2rem', marginBottom: '2.5rem', lineHeight: '1.6' }}>
+                        <div style={{ fontSize: '1.2rem', marginBottom: '2rem', lineHeight: '1.6' }}>
                             <strong style={{ color: 'var(--primary)', fontSize: '1.7rem' }}>{orgData?.name}</strong><br />
                             조직의 <span style={{ color: orgData?.invitedRole === 'admin' ? 'var(--accent)' : 'var(--secondary)', fontWeight: 'bold' }}>
-                                {orgData?.invitedRole === 'admin' ? '운영 관리자' : '일반 구성원'}
-                            </span>로 합류하시겠습니까?
-                        </div>
-                        <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1.5rem' }}>
-                            {isEmailSignMode && (
-                                <input type="text" value={userName} onChange={e => setUserName(e.target.value)} placeholder="실명" className="glass-card" style={{ padding: '0.8rem' }} required />
-                            )}
-                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="이메일" className="glass-card" style={{ padding: '0.8rem' }} required />
-                            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호" className="glass-card" style={{ padding: '0.8rem' }} required />
-                            <button type="submit" className="btn-primary" style={{ padding: '1rem' }} disabled={pending}>
-                                {pending ? "처리 중..." : (isEmailSignMode ? "가입 후 합류하기" : "로그인 후 합류하기")}
-                            </button>
-                        </form>
-
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1.5rem', cursor: 'pointer' }} onClick={() => setIsEmailSignMode(!isEmailSignMode)}>
-                            {isEmailSignMode ? "이미 계정이 있으신가요? 로그인하기" : "처음이신가요? 이메일로 가입하기"}
+                                {orgData?.invitedRole === 'admin' ? '운영 관리자' : '구성원'}
+                            </span>{orgData?.invitedRole === 'admin' ? '로' : '으로'} 합류하시겠습니까?
                         </div>
 
-                        <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
-                            <button className="glass-card" onClick={handleGoogleLogin} style={{ width: '100%', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                                <img src="https://www.google.com/favicon.ico" alt="G" style={{ width: '16px' }} />
-                                Google로 시작하기
+                        <p style={{ fontSize: '0.95rem', color: 'var(--text-dim)', marginBottom: '1.2rem', wordBreak: 'keep-all' }}>
+                            계정에 로그인하면 즉시 새로운 조직에 합류하게 됩니다.
+                        </p>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.1)', padding: '0.3rem', borderRadius: '12px' }}>
+                            <button
+                                onClick={() => setAuthMethod('email')}
+                                style={{
+                                    flex: 1, padding: '0.6rem', borderRadius: '8px', border: 'none',
+                                    background: authMethod === 'email' ? 'var(--bg-surface)' : 'transparent',
+                                    color: authMethod === 'email' ? 'var(--text-main)' : 'var(--text-dim)',
+                                    fontWeight: authMethod === 'email' ? 'bold' : 'normal',
+                                    cursor: 'pointer', transition: 'all 0.2s',
+                                    boxShadow: authMethod === 'email' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+                                }}
+                            >
+                                ✉️ 이메일
+                            </button>
+                            <button
+                                onClick={() => setAuthMethod('google')}
+                                style={{
+                                    flex: 1, padding: '0.6rem', borderRadius: '8px', border: 'none',
+                                    background: authMethod === 'google' ? 'var(--bg-surface)' : 'transparent',
+                                    color: authMethod === 'google' ? 'var(--text-main)' : 'var(--text-dim)',
+                                    fontWeight: authMethod === 'google' ? 'bold' : 'normal',
+                                    cursor: 'pointer', transition: 'all 0.2s',
+                                    boxShadow: authMethod === 'google' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+                                }}
+                            >
+                                G Google
                             </button>
                         </div>
+
+                        {authMethod === 'email' && (
+                            <>
+                                <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1.5rem' }}>
+                                    {isEmailSignMode && (
+                                        <input type="text" value={userName} onChange={e => setUserName(e.target.value)} placeholder="실명" className="glass-card" style={{ padding: '0.8rem' }} required />
+                                    )}
+                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="이메일" className="glass-card" style={{ padding: '0.8rem' }} required />
+                                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호" className="glass-card" style={{ padding: '0.8rem' }} required />
+                                    <button type="submit" className="btn-primary" style={{ padding: '1rem' }} disabled={pending}>
+                                        {pending ? "처리 중..." : (isEmailSignMode ? "가입 후 합류하기" : "이메일 로그인 후 합류하기")}
+                                    </button>
+                                </form>
+
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1.5rem', cursor: 'pointer' }} onClick={() => setIsEmailSignMode(!isEmailSignMode)}>
+                                    {isEmailSignMode ? "이미 계정이 있으신가요? 로그인하기" : "처음이신가요? 이메일로 가입하기"}
+                                </div>
+                            </>
+                        )}
+
+                        {authMethod === 'google' && (
+                            <div style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+                                <button className="glass-card" onClick={handleGoogleLogin} style={{ width: '100%', padding: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', fontSize: '1rem', fontWeight: 'bold', border: '1px solid var(--border-glass)' }}>
+                                    <img src="https://www.google.com/favicon.ico" alt="G" style={{ width: '20px' }} />
+                                    Google 로그인 후 합류하기
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div>

@@ -355,13 +355,13 @@ export default function LandingPage({ children }: { children: React.ReactNode })
         .visual-card {
           width: 360px;
           height: 240px;
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-surface);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--border-glass);
           border-radius: 16px;
           padding: 1.5rem;
           position: relative;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+          box-shadow: var(--shadow-premium);
           transform: perspective(1000px) rotateY(-10deg) rotateX(5deg);
         }
         .card-header {
@@ -375,7 +375,7 @@ export default function LandingPage({ children }: { children: React.ReactNode })
         .green { background: #27c93f; }
         .skeleton-line {
           height: 10px;
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(128, 128, 128, 0.2);
           border-radius: 5px;
           margin-bottom: 10px;
         }
@@ -389,19 +389,20 @@ export default function LandingPage({ children }: { children: React.ReactNode })
         .skeleton-box {
           flex: 1;
           height: 60px;
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(128, 128, 128, 0.1);
           border-radius: 8px;
         }
         .floating-badge {
           position: absolute;
           padding: 0.6rem 1rem;
-          background: rgba(30, 30, 40, 0.8);
+          background: var(--bg-card);
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--border-glass);
+          color: var(--text-main);
           border-radius: 30px;
           font-size: 0.9rem;
           font-weight: 600;
-          box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+          box-shadow: var(--shadow-premium);
           animation: float 3s ease-in-out infinite;
         }
         .badge-1 { top: -20px; right: -20px; animation-delay: 0s; }
@@ -498,25 +499,73 @@ export default function LandingPage({ children }: { children: React.ReactNode })
         }
 
         /* Mobile Responsive */
+        /* Mobile Responsive */
         @media (max-width: 768px) {
+          .landing-container {
+            padding: 2rem 1rem;
+            width: 100%;
+            overflow-x: hidden;
+          }
+
           .hero-section {
             flex-direction: column;
             text-align: center;
-            padding-top: 2rem;
+            padding: 3rem 0;
+            min-height: auto;
           }
           .hero-content {
             margin: 0 auto;
+            width: 100%;
           }
           .hero-title {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
           }
+          .hero-subtitle {
+            font-size: 1rem;
+            margin-bottom: 2rem;
+          }
+          
           .hero-visual {
             width: 100%;
-            margin-top: 2rem;
+            margin-top: 3rem;
+            padding: 0 1rem; 
           }
+          /* Visual card wider on mobile */
           .visual-card {
             width: 100%;
-            max-width: 320px;
+            max-width: 100%;
+            height: auto;
+            min-height: 240px;
+          }
+
+          /* Section Titles */
+          .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+          }
+
+          /* Features Grid */
+          .features-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+          }
+          .feature-card {
+            padding: 1.5rem;
+          }
+
+          /* Why Section - Fix overflow and width */
+          .why-content {
+            padding: 2rem 1.5rem;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+          }
+          
+          /* QnA Section */
+          .qna-section {
+            padding: 3rem 0;
+          }
+          .qna-list {
+            margin: 0 0.5rem;
           }
         }
         

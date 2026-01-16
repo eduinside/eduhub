@@ -380,6 +380,9 @@ a:hover {
   div[style*="gap"] {
     gap: 0.5rem !important;
   }
+  .mobile-text-hide {
+    display: none !important;
+  }
 }
 
 /* Tablet Landscape - optimize for tablets */

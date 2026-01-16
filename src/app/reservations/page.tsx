@@ -377,12 +377,12 @@ export default function ReservationsPage() {
 
     return (
         <main style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="resv-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🗓️ 예약현황</h1>
                     <p style={{ color: 'var(--text-dim)' }}>원하는 날짜와 자원을 선택하여 예약하세요.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="resv-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <button onClick={() => {
                         const d = new Date(currentDate);
                         d.setDate(d.getDate() - 7);
@@ -399,7 +399,7 @@ export default function ReservationsPage() {
                         setCurrentDate(d);
                     }} className="glass-card" style={{ padding: '0.5rem 1rem' }}>다음 주 &gt;</button>
 
-                    <span style={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: '0.5rem' }}>{weekStartStr} ~ {weekEndStr}</span>
+                    <div className="resv-date-text" style={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: '0.5rem' }}>{weekStartStr} ~ {weekEndStr}</div>
                 </div>
             </div>
 
@@ -428,7 +428,7 @@ export default function ReservationsPage() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+            <div className="resv-date-container" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', paddingBottom: '0.5rem' }}>
                 {weekDates.map(date => {
                     const dateStr = toYYYYMMDD(date);
                     const dayName = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
@@ -442,10 +442,8 @@ export default function ReservationsPage() {
                         <button
                             key={dateStr}
                             onClick={() => setSelectedDateStr(dateStr)}
-                            className={isActive ? "btn-primary" : "glass-card"}
+                            className={`resv-date-btn ${isActive ? "btn-primary" : "glass-card"}`}
                             style={{
-                                padding: '1rem',
-                                minWidth: '80px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
@@ -475,6 +473,29 @@ export default function ReservationsPage() {
                     );
                 })}
             </div>
+            <style jsx>{`
+                .resv-date-btn {
+                    padding: 1rem;
+                    min-width: 80px;
+                }
+                @media (max-width: 768px) {
+                    .resv-date-container {
+                        gap: 0.25rem !important;
+                    }
+                    .resv-date-btn {
+                        padding: 0.6rem 0.2rem !important;
+                        min-width: 0 !important;
+                        border-radius: 10px !important;
+                    }
+                    .resv-date-btn span:first-child {
+                        font-size: 0.75rem !important;
+                        margin-bottom: 0.2rem;
+                    }
+                    .resv-date-btn span:nth-child(2) {
+                        font-size: 0.95rem !important;
+                    }
+                }
+            `}</style>
 
             <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
                 {resources.length === 0 ? (
@@ -638,6 +659,24 @@ export default function ReservationsPage() {
             )}
 
             <style jsx>{`
+                @media (max-width: 768px) {
+                    .resv-header {
+                        flex-direction: column !important;
+                        align-items: stretch !important;
+                        gap: 1.5rem;
+                    }
+                    .resv-controls {
+                        flex-wrap: wrap;
+                        justify-content: space-between;
+                    }
+                    .resv-date-text {
+                        width: 100%;
+                        text-align: center;
+                        margin-left: 0 !important;
+                        margin-top: 0.5rem;
+                        display: block;
+                    }
+                }
                 .hover-cell:hover {
                     background: rgba(255,255,255,0.05) !important;
                 }

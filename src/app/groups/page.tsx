@@ -113,10 +113,11 @@ export default function GroupsPage() {
                 </div>
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="btn-primary"
+                    className="btn-primary create-group-btn"
                     style={{ padding: '0.8rem 1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
-                    + 새 그룹 만들기
+                    <span className="plus-mark" style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span>
+                    <span className="btn-text">새 그룹 만들기</span>
                 </button>
             </header>
 
@@ -255,6 +256,24 @@ export default function GroupsPage() {
                     </div>
                 </div>
             )}
+            <style jsx>{`
+                @media (max-width: 768px) {
+                    :global(.create-group-btn) {
+                        padding: 0 !important;
+                        width: 3rem;
+                        height: 3rem;
+                        justify-content: center;
+                        border-radius: 50% !important;
+                    }
+                    .btn-text {
+                        display: none;
+                    }
+                    .plus-mark {
+                        font-size: 1.5rem !important;
+                        margin: 0 !important;
+                    }
+                }
+            `}</style>
         </main>
     );
 }

@@ -520,7 +520,7 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
             <div className="layout-container" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
 
                 {/* Main Content: 공지사항 목록 */}
-                <div style={{ flex: '1', minWidth: '600px' }}>
+                <div className="main-content" style={{ flex: '1', minWidth: '600px' }}>
                     <section className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <button onClick={() => changeDate(-1)} className="glass-card" style={{ padding: '0.5rem 1rem' }}>&lt;</button>
@@ -744,6 +744,9 @@ export default function NoticesPage({ params }: { params: Promise<{ date: string
                 @media (max-width: 1000px) {
                     .sidebar { display: none !important; }
                     .layout-container { flex-direction: column; }
+                    
+                    main { padding: 1rem !important; }
+                    .main-content { min-width: 0 !important; width: 100% !important; }
                 }
             `}</style>
 

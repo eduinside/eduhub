@@ -27,18 +27,18 @@ export default function Navbar() {
             zIndex: 100,
             border: isAdminPage ? '1px solid var(--accent)' : '1px solid var(--border-glass)'
         }}>
-            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <div className="nav-left-group" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
                 <Link
                     href={pathname.startsWith("/admin/super") ? "/admin/super" : pathname.startsWith("/admin/org") ? "/admin/org" : "/"}
                     style={{ textDecoration: 'none', fontWeight: 'bold', fontSize: '1.2rem', color: isAdminPage ? 'var(--accent)' : 'var(--primary)', letterSpacing: '-0.5px' }}
                 >
-                    {APP_CONFIG.APP_NAME} {isAdminPage && <span style={{ fontSize: '0.75rem', verticalAlign: 'middle', marginLeft: '0.4rem', background: 'var(--accent)', color: 'white', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>Admin</span>}
+                    {APP_CONFIG.APP_NAME} {isAdminPage && <span style={{ fontSize: '0.75rem', verticalAlign: 'middle', marginLeft: '0.4rem', background: 'var(--accent)', color: 'white', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>{pathname.startsWith("/admin/super") ? "Super" : "Admin"}</span>}
                 </Link>
 
                 <NavMenu />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <div className="nav-right-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                 <OrgSelector />
                 <UserMenu />
             </div>
@@ -53,22 +53,51 @@ export default function Navbar() {
                     padding-left: 1.2rem !important;
                     transform: translateX(4px);
                 }
-                @media (max-width: 768px) {
+                
+                /* Desktop/Mobile Visibility Utilities */
+                .nav-mobile-btn {
+                    display: none !important;
+                }
+                .nav-desktop {
+                    display: flex !important;
+                }
+
+                @media (max-width: 900px) {
+                    .nav-left-group {
+                        width: 100% !important;
+                        justify-content: space-between !important;
+                    }
                     nav.glass-panel {
                         margin: 0.5rem !important;
-                        padding: 0.5rem 1rem !important;
-                        flex-wrap: nowrap !important;
+                        padding: 0.8rem 1rem !important;
                         gap: 0.5rem !important;
                     }
-                    nav.glass-panel > div:first-child {
-                        gap: 0.75rem !important;
-                        flex-shrink: 1;
-                        min-width: 0;
+                    /* Hide desktop menu on tablet/mobile */
+                    .nav-desktop {
+                        display: none !important;
                     }
-                    nav.glass-panel > div:last-child {
-                        gap: 0.5rem !important;
-                        flex-shrink: 0;
+                    /* Hide right actions on mobile (moved to hamburger) */
+                    .nav-right-actions {
+                        display: none !important;
                     }
+                    /* Show hamburger button on tablet/mobile */
+                    .nav-mobile-btn {
+                        display: flex !important;
+                        align-items: center;
+                        justify-content: center;
+                        background: transparent;
+                        border: none;
+                        padding: 0.5rem;
+                        cursor: pointer;
+                        color: var(--text-main);
+                        border-radius: 8px;
+                        transition: background 0.2s;
+                    }
+                    .nav-mobile-btn:hover {
+                        background: rgba(0,0,0,0.05);
+                    }
+                    
+                    /* Adjust layout */
                     .bookmark-dropdown-container, .group-dropdown-container {
                         display: none !important;
                     }

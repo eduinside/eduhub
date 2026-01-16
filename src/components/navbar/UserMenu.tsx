@@ -26,8 +26,8 @@ export default function UserMenu() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
             <div style={{ width: '1px', height: '20px', background: 'var(--border-glass)' }}></div>
 
-            <button onClick={toggleTheme} className="glass-card" style={{ padding: '0.5rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', borderRadius: '50%' }} title={`현재: ${theme === 'dark' ? '다크' : (theme === 'light' ? '라이트' : '자동')} 모드`}>
-                {theme === 'dark' ? '☀️' : (theme === 'light' ? '🖥️' : '🌙')}
+            <button onClick={toggleTheme} className="glass-card" style={{ padding: '0.5rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', borderRadius: '50%' }} title={`테마 변경 (${theme})`}>
+                {theme === 'auto' ? '🌓' : (theme === 'light' ? '☀️' : '🌙')}
             </button>
 
             <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>

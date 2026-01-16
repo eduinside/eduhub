@@ -641,7 +641,7 @@ export default function Home() {
               </Link>
             </div>
 
-            <section className={`glass-panel ${!noticesLoading ? 'animate-fade' : ''}`} style={{ padding: '2rem', marginBottom: '3rem', minHeight: '300px' }}>
+            <section className={`glass-panel notice-section ${!noticesLoading ? 'animate-fade' : ''}`} style={{ padding: '2rem', marginBottom: '3rem', minHeight: '300px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.5rem' }}>📢 {formatDate(new Date())}</h2>
                 <button className="glass-card" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }} onClick={() => { const d = new Date(); const dateStr = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); router.push(`/notice/${dateStr}`); }}>더 보기</button>
@@ -653,7 +653,7 @@ export default function Home() {
                   공지사항을 불러오는 중...
                 </div>
               ) : todayNotices.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <div className="notice-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                   {todayNotices.map((notice, idx) => {
                     const isRead = readNoticeIds.includes(notice.id);
                     const isAll = notice.orgId === 'all';
@@ -709,6 +709,22 @@ export default function Home() {
           </>
         )}
         <style jsx>{`
+        @media (max-width: 768px) {
+          main {
+            padding: 1.5rem 1rem !important; /* 상하 1.5, 좌우 1 */
+            padding-bottom: 6rem !important; /* 하단 여백 확보 */
+          }
+          .notice-section { padding: 1.5rem 1rem !important; }
+          .notice-list { width: 100%; min-width: 0; }
+          
+          /* 카드 내부 패딩 축소 및 오버플로우 방지 */
+          .glass-card {
+            padding: 1rem !important;
+            min-width: 0 !important; 
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+          }
+        }
         .markdown-mini :global(p) { margin: 0; }
         .input-row { display: flex; align-items: center; gap: 1.5rem; }
         .input-row label { width: 100px; font-size: 0.95rem; color: var(--text-dim); flex-shrink: 0; }

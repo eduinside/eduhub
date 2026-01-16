@@ -692,7 +692,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                                 className="glass-card"
                                 style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--primary)' }}
                             >
-                                ⚙️ 그룹 설정
+                                <span>⚙️</span> <span className="mobile-text-hide">그룹 설정</span>
                             </button>
                         )}
                         {group.ownerId === user?.uid && (
@@ -705,11 +705,11 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
             {/* Tabs */}
             <div className="glass-panel" style={{ display: 'flex', padding: '0.4rem', gap: '0.4rem', marginBottom: '2rem' }}>
                 {[
-                    { id: 'chat', label: '💬 대화함' },
-                    { id: 'notices', label: '📢 공지사항' },
-                    { id: 'surveys', label: '📊 설문조사' },
-                    { id: 'members', label: '👥 멤버' }
-                ].map(tab => (
+                    { id: 'chat', icon: '💬', label: '대화함' },
+                    { id: 'notices', icon: '📢', label: '공지사항' },
+                    { id: 'surveys', icon: '📊', label: '설문조사' },
+                    { id: 'members', icon: '👥', label: '멤버' }
+                ].map((tab: any) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
@@ -722,10 +722,12 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                             color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-main)',
                             fontWeight: '600',
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
                         }}
                     >
-                        {tab.label}
+                        <span>{tab.icon}</span>
+                        <span className="mobile-text-hide">{tab.label}</span>
                     </button>
                 ))}
             </div>
@@ -1114,7 +1116,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <h3 style={{ fontSize: '1.2rem' }}>멤버 목록 ({members.length})</h3>
                             {group.ownerId === user?.uid && (
-                                <button onClick={() => setIsMemberAddModalOpen(true)} className="btn-primary" style={{ padding: '0.6rem 1.2rem' }}>+ 멤버 초대</button>
+                                <button onClick={() => setIsMemberAddModalOpen(true)} className="btn-primary" style={{ padding: '0.6rem 1.2rem' }}><span>+</span> <span className="mobile-text-hide" style={{ marginLeft: '0.4rem' }}>멤버 초대</span></button>
                             )}
                         </div>
 
@@ -1412,6 +1414,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
                     </div>
                 )
             }
+
         </main >
 
     );
