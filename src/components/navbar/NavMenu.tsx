@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,6 +17,11 @@ export default function NavMenu() {
     const updatedGroupIds = useGroupStatus();
 
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const [orgBookmarks, setOrgBookmarks] = useState<{ title: string, url: string }[]>([]);
     const [personalBookmarks, setPersonalBookmarks] = useState<{ title: string, url: string }[]>([]);
     const [userGroups, setUserGroups] = useState<{ id: string, name: string }[]>([]);
@@ -343,7 +349,7 @@ export default function NavMenu() {
             </div>
 
             {/* Mobile Overlay Menu */}
-            {isMobileOpen && (
+            {mounted && isMobileOpen && createPortal(
                 <div style={{
                     position: 'fixed',
                     inset: 0,
@@ -518,7 +524,8 @@ export default function NavMenu() {
                         </div>
 
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <style jsx>{`
