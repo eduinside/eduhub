@@ -194,7 +194,7 @@ export default function Footer() {
                     onClick={() => setIsModalOpen(true)}
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
-                    className="glass-card"
+                    className="glass-card footer-inquiry-btn"
                     style={{
                         border: "2px solid var(--primary)",
                         background: isHovered ? "var(--primary)" : "rgba(37, 99, 235, 0.1)",
@@ -210,12 +210,13 @@ export default function Footer() {
                         alignItems: "center",
                         gap: "0.5rem",
                         color: isHovered ? "white" : "var(--primary)",
-                        fontWeight: "600"
+                        fontWeight: "600",
+                        zIndex: 50 // ensure visible
                     }}
                     title="문의하기"
                 >
                     <span style={{ fontSize: "1.5rem" }}>💬</span>
-                    <span style={{ fontSize: "0.9rem" }}>문의하기</span>
+                    <span className="footer-inquiry-text" style={{ fontSize: "0.9rem" }}>문의하기</span>
                     {hasUnreadReplies && (
                         <span style={{
                             position: "absolute",
@@ -456,6 +457,22 @@ export default function Footer() {
                     50% {
                         opacity: 0.5;
                         transform: scale(1.2);
+                    }
+                }
+                @media (max-width: 600px) {
+                    .footer-inquiry-text {
+                        display: none;
+                    }
+                    .footer-inquiry-btn {
+                        padding: 0 !important;
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 50% !important;
+                        justify-content: center;
+                    }
+                    .footer-inquiry-btn span:first-child {
+                        font-size: 1.5rem !important;
+                        margin: 0 !important;
                     }
                 }
             `}</style>

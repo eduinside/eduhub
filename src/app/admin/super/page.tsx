@@ -75,15 +75,45 @@ export default function SuperAdminPage() {
     const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null);
     const [limitModalOrg, setLimitModalOrg] = useState<Organization | null>(null);
 
+    const copyToClipboard = (text: string, successMsg: string) => {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text)
+                .then(() => showToast(successMsg, "success"))
+                .catch(err => {
+                    console.error('Async: Could not copy text: ', err);
+                    fallbackCopy(text, successMsg);
+                });
+        } else {
+            fallbackCopy(text, successMsg);
+        }
+    };
+
+    const fallbackCopy = (text: string, successMsg: string) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast(successMsg, "success");
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+            showToast("복사에 실패했습니다.", "error");
+        }
+        document.body.removeChild(textArea);
+    };
+
     const handleCopyText = (text: string) => {
-        navigator.clipboard.writeText(text);
-        showToast("코드가 복사되었습니다.", "success");
+        copyToClipboard(text, "코드가 복사되었습니다.");
     };
 
     const handleCopyInviteLink = (code: string) => {
         const link = `${window.location.origin}/invite/${code}`;
-        navigator.clipboard.writeText(link);
-        showToast("초대 링크가 복사되었습니다.", "success");
+        copyToClipboard(link, "초대 링크가 복사되었습니다.");
     };
 
     useEffect(() => {
