@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 🛑 사이트 중단: 모든 접근 차단
+    // 원복 시: storage.rules.backup 파일의 내용으로 교체
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

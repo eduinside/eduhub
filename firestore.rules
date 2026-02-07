@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 🛑 사이트 중단: 모든 접근 차단
+    // 원복 시: firestore.rules.backup 파일의 내용으로 교체
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
