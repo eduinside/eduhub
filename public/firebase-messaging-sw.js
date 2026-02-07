@@ -8,14 +8,12 @@ importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-comp
 // your app's Firebase config object.
 // https://firebase.google.com/docs/web/setup#config-object
 firebase.initializeApp({
-    // TODO: Replace with your project's config object
-    // You can find this in your Firebase Console > Project Settings > General
-    apiKey: "AIzaSyD08pZhaqgz0UFjHXqlX2LJguS7PvVT15Q",
-    authDomain: "eduhub-4a75e.firebaseapp.com",
-    projectId: "eduhub-4a75e",
-    storageBucket: "eduhub-4a75e.firebasestorage.app",
-    messagingSenderId: "522081723508",
-    appId: "1:522081723508:web:7468ec2b1f98f648bd1d21"
+    apiKey: "__FIREBASE_API_KEY__",
+    authDomain: "__FIREBASE_AUTH_DOMAIN__",
+    projectId: "__FIREBASE_PROJECT_ID__",
+    storageBucket: "__FIREBASE_STORAGE_BUCKET__",
+    messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
+    appId: "__FIREBASE_APP_ID__"
 });
 
 // Retrieve an instance of Firebase Messaging so that it can handle background
